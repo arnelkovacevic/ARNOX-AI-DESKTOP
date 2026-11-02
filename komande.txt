@@ -137,3 +137,37 @@ Ostalo:
   docs/USAGE.md           detaljni primjeri za svaki modul
   docs/QA.md              provjera kvaliteta i testiranje
   .qa-artifacts/          izvještaji iz self-testa
+
+
+WEB APLIKACIJA (PWA) — LOKALNO POKRETANJE
+=========================================
+
+Potrebna su dva terminala. Oba počinju iz foldera projekta.
+
+Terminal 1: API (FastAPI, baza je SQLite u ./tmp, Redis nije potreban)
+
+  cd /Users/arnel/Desktop/JARVIS-DESKTOP/JARVIS-OS-V.2
+  source .venv/bin/activate
+  alembic upgrade head
+  JARVIS_ENV=development uvicorn api.server:app --reload --port 8000
+
+  Provjera: otvori http://localhost:8000/health, treba pisati ok.
+
+Terminal 2: web klijent (Next.js)
+
+  cd /Users/arnel/Desktop/JARVIS-DESKTOP/JARVIS-OS-V.2/web
+  cp .env.example .env.local
+  npm install
+  npm run dev
+
+  Otvori http://localhost:3000 u pregledniku.
+
+Napomene:
+  - Prvi put: u web aplikaciji napravi nalog i unesi svoj GEMINI_API_KEY (čuva se šifrovan).
+  - Mikrofon u pregledniku radi na localhost-u. Sa telefona preko Wi-Fi-ja (http://IP:3000) mikrofon NE radi;
+    treba HTTPS adresa (npr. Vercel nakon deploya).
+  - Produkcijski build i PWA (service worker) rade samo u "npm run build" + "npm start", ne u "npm run dev":
+      npm run build
+      npm start          (http://localhost:3000)
+  - Zaustavljanje: Ctrl+C u oba terminala.
+  - Ako alembic javi grešku o putanji ./tmp, napravi folder: mkdir -p tmp
