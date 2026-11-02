@@ -508,7 +508,7 @@ TOOL_DECLARATIONS = [
             "properties": {
                 "action": {
                     "type": "STRING",
-                    "enum": ["connect", "status", "disconnect", "inbox", "unread", "search", "read", "prepare", "approve", "cancel", "folders", "folder", "mark_read", "mark_unread", "star", "unstar", "archive", "trash", "untrash", "draft_list", "draft_create", "draft_update", "draft_delete"],
+                    "enum": ["connect", "status", "disconnect", "inbox", "unread", "search", "read", "prepare", "approve", "cancel", "folders", "folder", "mark_read", "mark_unread", "star", "unstar", "archive", "trash", "untrash", "draft_list", "draft_create", "draft_update", "draft_delete", "attachments", "attachment_read", "attachment_save"],
                     "description": "Email operation."
                 },
                 "provider": {
@@ -533,7 +533,8 @@ TOOL_DECLARATIONS = [
                 "subject": {"type": "STRING", "description": "Exact email subject for prepare."},
                 "body": {"type": "STRING", "description": "Exact email body for prepare."},
                 "folder": {"type": "STRING", "description": "Folder or label name for action=folder, e.g. inbox, sent, drafts, trash, or a custom label."},
-                "draft_id": {"type": "STRING", "description": "Draft ID from draft_list, for draft_update and draft_delete."}
+                "draft_id": {"type": "STRING", "description": "Draft ID from draft_list, for draft_update and draft_delete."},
+                "attachment": {"type": "STRING", "description": "Attachment number or file name from the attachments list, for attachment_read and attachment_save."}
             },
             "required": ["action"]
         }
@@ -1063,8 +1064,10 @@ TOOL_DECLARATIONS = [
     "description": (
         "Processes any file that the user has uploaded or dropped onto the interface. "
         "Use this when the user refers to an uploaded file and wants an action on it. "
+        "To read what is inside a document (PDF, Word, Excel, CSV, JSON, HTML, PowerPoint, text), "
+        "use action=read: it returns the text locally so you can answer or summarize it yourself. "
         "Supports: images (describe/ocr/resize/compress/convert), "
-        "PDFs (summarize/extract_text/to_word), "
+        "PDFs (read/summarize/extract_text/to_word), "
         "Word docs & text files (summarize/fix/reformat/translate), "
         "CSV/Excel (analyze/stats/filter/sort/convert), "
         "JSON/XML (validate/format/analyze), "
@@ -1086,7 +1089,8 @@ TOOL_DECLARATIONS = [
             "action": {
                 "type": "STRING",
                 "description": (
-                    "What to do with the file. Examples by type:\n"
+                    "What to do with the file. For ANY readable document use read to get its text. Examples by type:\n"
+                    "any document (pdf/docx/xlsx/csv/json/html/pptx/txt): read\n"
                     "image: describe | ocr | resize | compress | convert | info\n"
                     "pdf: summarize | extract_text | to_word | info\n"
                     "docx/txt: summarize | fix | reformat | translate_hint | word_count | to_bullet\n"

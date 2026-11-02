@@ -286,6 +286,15 @@ def _process_pdf(path: Path, action: str, params: dict, speak=None) -> str:
     def _extract_pdf_text(max_chars=50000) -> str:
         text = ""
         try:
+            import pymupdf  # PyMuPDF is in requirements.txt, so this is the normal path.
+            with pymupdf.open(path) as doc:
+                for page in doc:
+                    text += page.get_text() + "\n"
+            if text.strip():
+                return text[:max_chars]
+        except Exception:
+            text = ""
+        try:
             import pdfplumber
             with pdfplumber.open(path) as pdf:
                 for page in pdf.pages:
@@ -1018,6 +1027,12 @@ def file_processor(parameters: dict, player=None, speak=None) -> str:
         "pptx":    _process_pptx,
         "unknown": _process_unknown,
     }
+
+    if action in {"read", "read_text", "show", "open_text", "contents", "what_is_in"}:
+        # Local extraction only: returns the text itself so the assistant can read or
+        # summarize it in conversation, without a separate AI model call.
+        from actions.document_reader import read_document
+        return read_document(path, max_chars=int(parameters.get("max_chars") or 20000))
 
     handler = dispatch.get(file_type, _process_unknown)
 

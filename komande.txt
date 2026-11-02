@@ -94,6 +94,13 @@ Prezentacije:
 Zadaci i pozadinski poslovi:
   "task status" / "what is running"
 
+Dokumenti i prilozi:
+  "read this PDF" / "what is in this file"   pročitaj i sažmi dokument (PDF, Word, Excel, CSV, JSON, HTML, PowerPoint, txt)
+  "show attachments of that email"            lista priloga uz mail
+  "read the attachment" / "read attachment 2" pročitaj prilog (preuzima se privremeno, pa se briše)
+  "save the attachment"                       snimi prilog u Downloads/ARNOX Attachments
+  Izvršne datoteke (.exe, .dmg, ...) se nikad ne otvaraju. Skenirani PDF bez teksta se prijavi kao takav.
+
 Fajlovi i ekran:
   "open <putanja ili fajl>"        otvori fajl ili folder
   "what is on my screen"           analiza ekrana (jednom po zahtjevu)

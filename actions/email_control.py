@@ -16,6 +16,7 @@ import os
 import platform
 import re
 import subprocess
+import tempfile
 import threading
 from email.header import decode_header, make_header
 from email.message import EmailMessage
@@ -399,11 +400,16 @@ def _gmail_read(message_id: str, max_chars: int = 12000) -> str:
         body = _gmail_body(message.get("payload", {})) or str(message.get("snippet", ""))
         if len(body) > max_chars:
             body = body[:max_chars].rstrip() + "\n\n[Message truncated]"
+        attachments = _attachment_parts(message.get("payload", {}))
+        attachment_note = (
+            "\n\nAttachments (use action=attachment_read to read one):\n" + _format_attachment_list(attachments)
+            if attachments else ""
+        )
         return (
             f"Subject: {headers.get('subject', '(No subject)')}\n"
             f"From: {headers.get('from', 'Unknown sender')}\n"
             f"To: {headers.get('to', _gmail_account() or 'Unknown recipient')}\n"
-            f"Received: {headers.get('date', 'Unknown date')}\n\n{body}"
+            f"Received: {headers.get('date', 'Unknown date')}\n\n{body}{attachment_note}"
         )
     except GmailConnectionError as exc:
         return str(exc)
@@ -1344,6 +1350,151 @@ def _gmail_draft_delete(draft_id: str) -> str:
         return _gmail_api_error(exc, "draft deletion")
 
 
+MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
+_BLOCKED_ATTACHMENT_EXTS = {
+    "exe", "msi", "dmg", "pkg", "app", "scr", "com", "dll", "jar", "apk", "iso", "vbs", "lnk", "bat", "cmd", "ps1",
+}
+
+
+def _attachment_parts(payload: dict) -> list[dict]:
+    """Collect parts that carry a file, from a Gmail message payload, in order."""
+    found: list[dict] = []
+
+    def walk(part: dict) -> None:
+        body = part.get("body", {}) or {}
+        filename = part.get("filename") or ""
+        if filename and (body.get("attachmentId") or body.get("data")):
+            found.append({
+                "filename": filename,
+                "mime": part.get("mimeType", "application/octet-stream"),
+                "size": int(body.get("size", 0) or 0),
+                "attachment_id": body.get("attachmentId"),
+                "data": body.get("data"),
+            })
+        for child in part.get("parts", []) or []:
+            walk(child)
+
+    walk(payload or {})
+    return found
+
+
+def _safe_filename(name: str) -> str:
+    """Keep only the final path component and drop characters that are unsafe in file names."""
+    base = Path(str(name).replace("\\", "/")).name
+    base = re.sub(r"[\x00-\x1f<>:\"|?*]", "_", base).strip(" .")
+    base = base[-120:] if len(base) > 120 else base
+    return base or "attachment"
+
+
+def _format_attachment_list(parts: list[dict]) -> str:
+    lines = []
+    for index, part in enumerate(parts, start=1):
+        kb = max(1, part["size"] // 1024) if part["size"] else 0
+        size = f", {kb} KB" if kb else ""
+        lines.append(f"{index}. {part['filename']} ({part['mime']}{size})")
+    return "\n".join(lines)
+
+
+def _select_attachment(parts: list[dict], selector: str) -> dict | str:
+    selector = str(selector or "").strip()
+    if not parts:
+        return "This message has no attachments."
+    if not selector:
+        if len(parts) == 1:
+            return parts[0]
+        return "This message has several attachments. Tell me which one:\n" + _format_attachment_list(parts)
+    if selector.isdigit() and 1 <= int(selector) <= len(parts):
+        return parts[int(selector) - 1]
+    matches = [part for part in parts if selector.lower() in part["filename"].lower()]
+    if len(matches) == 1:
+        return matches[0]
+    if not matches:
+        return f"No attachment matches '{selector}'. Available:\n" + _format_attachment_list(parts)
+    return f"More than one attachment matches '{selector}':\n" + _format_attachment_list(matches)
+
+
+def _fetch_attachment(message_id: str, selector: str) -> tuple[str, bytes] | str:
+    """Download one attachment. Returns (safe_filename, bytes) or a readable error string."""
+    service = _gmail_service()
+    message = service.users().messages().get(userId="me", id=message_id, format="full").execute()
+    parts = _attachment_parts(message.get("payload", {}))
+    chosen = _select_attachment(parts, selector)
+    if isinstance(chosen, str):
+        return chosen
+    filename = _safe_filename(chosen["filename"])
+    extension = Path(filename).suffix.lower().lstrip(".")
+    if extension in _BLOCKED_ATTACHMENT_EXTS:
+        return f"{filename} is an executable or installer type, so ARNOX will not open or save it."
+    if chosen["size"] > MAX_ATTACHMENT_BYTES:
+        return f"{filename} is {chosen['size'] // (1024 * 1024)} MB, over the {MAX_ATTACHMENT_BYTES // (1024 * 1024)} MB limit."
+    if chosen["attachment_id"]:
+        result = service.users().messages().attachments().get(
+            userId="me", messageId=message_id, id=chosen["attachment_id"]
+        ).execute()
+        data = result.get("data", "")
+    else:
+        data = chosen.get("data", "")
+    raw = base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))
+    if len(raw) > MAX_ATTACHMENT_BYTES:
+        return f"{filename} is larger than the {MAX_ATTACHMENT_BYTES // (1024 * 1024)} MB limit."
+    return filename, raw
+
+
+def _gmail_attachments(message_id: str) -> str:
+    try:
+        service = _gmail_service()
+        message = service.users().messages().get(userId="me", id=message_id, format="full").execute()
+        parts = _attachment_parts(message.get("payload", {}))
+        if not parts:
+            return "This message has no attachments."
+        return "Attachments:\n" + _format_attachment_list(parts)
+    except GmailConnectionError as exc:
+        return str(exc)
+    except Exception as exc:
+        return _gmail_api_error(exc, "attachment listing")
+
+
+def _gmail_attachment_read(message_id: str, selector: str) -> str:
+    """Download to a private temp folder, read the text locally, then delete the file."""
+    try:
+        fetched = _fetch_attachment(message_id, selector)
+        if isinstance(fetched, str):
+            return fetched
+        filename, raw = fetched
+        from actions.document_reader import read_document
+
+        with tempfile.TemporaryDirectory(prefix="arnox-attachment-") as folder:
+            target = Path(folder) / filename
+            target.write_bytes(raw)
+            return read_document(target)
+    except GmailConnectionError as exc:
+        return str(exc)
+    except Exception as exc:
+        return _gmail_api_error(exc, "attachment reading")
+
+
+def _gmail_attachment_save(message_id: str, selector: str) -> str:
+    """Save to Downloads/ARNOX Attachments only when the user explicitly asks."""
+    try:
+        fetched = _fetch_attachment(message_id, selector)
+        if isinstance(fetched, str):
+            return fetched
+        filename, raw = fetched
+        folder = Path.home() / "Downloads" / "ARNOX Attachments"
+        folder.mkdir(parents=True, exist_ok=True)
+        target = folder / filename
+        counter = 1
+        while target.exists():
+            target = folder / f"{Path(filename).stem} ({counter}){Path(filename).suffix}"
+            counter += 1
+        target.write_bytes(raw)
+        return f"Attachment saved: {target}"
+    except GmailConnectionError as exc:
+        return str(exc)
+    except Exception as exc:
+        return _gmail_api_error(exc, "attachment saving")
+
+
 def _gmail_management(action: str, params: dict) -> str | None:
     """Actions beyond read/send: labels, folders, trash, read state, stars, drafts.
 
@@ -1371,6 +1522,15 @@ def _gmail_management(action: str, params: dict) -> str | None:
         if not message_id:
             return "A message ID from the inbox or search results is required."
         return _gmail_trash_message(message_id, restore=action == "untrash")
+    if action in {"attachments", "attachment_read", "attachment_save"}:
+        if not message_id:
+            return "A message ID from the inbox or search results is required."
+        selector = str(params.get("attachment", "")).strip()
+        if action == "attachments":
+            return _gmail_attachments(message_id)
+        if action == "attachment_read":
+            return _gmail_attachment_read(message_id, selector)
+        return _gmail_attachment_save(message_id, selector)
     if action == "draft_list":
         return _gmail_draft_list(limit)
     if action == "draft_create":
@@ -1478,5 +1638,6 @@ def email_control(parameters: dict | None = None, response=None, player=None, se
     return (
         "Unknown email action. Available: connect, status, disconnect, inbox, unread, search, read, "
         "folders, folder, mark_read, mark_unread, star, unstar, archive, trash, untrash, "
-        "draft_list, draft_create, draft_update, draft_delete, prepare, approve, cancel."
+        "draft_list, draft_create, draft_update, draft_delete, attachments, attachment_read, "
+        "attachment_save, prepare, approve, cancel."
     )
