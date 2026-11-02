@@ -61,6 +61,27 @@ def workspace_stylesheet() -> str:
             background: {C.DARK2}; color: {C.PRI}; border: none; border-right: 1px solid {C.BORDER};
             border-bottom: 1px solid {C.BORDER_B}; padding: 6px 8px;
         }}
+        QListView {{ background: {C.PANEL}; border: 1px solid {C.BORDER}; outline: none; }}
+        QFrame#mailCard {{ background: {C.PANEL2}; border: 1px solid {C.BORDER_B}; border-radius: 8px; }}
+        QLabel#mailSubject {{ color: {C.WHITE}; font-family: "{font_family()}"; font-size: 21px; font-weight: 600; }}
+        QLabel#mailFrom {{ color: {C.WHITE}; font-size: 14px; font-weight: 600; }}
+        QLabel#mailKey {{ color: {C.TEXT_DIM}; font-size: 10px; letter-spacing: 1px; }}
+        QLabel#mailValue {{ color: {C.TEXT}; font-size: 12px; }}
+        QLabel#mailAddress {{ color: {C.TEXT_MED}; font-size: 12px; }}
+        QLabel#mailBadge {{
+            color: {C.BG}; background: {C.PRI}; border-radius: 4px; padding: 3px 8px;
+            font-size: 10px; font-weight: 700;
+        }}
+        QFrame#mailDivider {{ color: {C.BORDER}; background: {C.BORDER}; max-height: 1px; border: none; }}
+        QLabel#mailChip {{
+            color: {C.TEXT}; background: {C.DARK2}; border: 1px solid {C.BORDER_B};
+            border-radius: 12px; padding: 5px 12px; font-size: 11px;
+        }}
+        QLabel#mailNote {{ color: {C.TEXT_DIM}; font-size: 10px; }}
+        QTextBrowser#mailBody {{
+            background: {C.PANEL}; color: {C.WHITE}; border: 1px solid {C.BORDER}; border-radius: 8px;
+            padding: 18px; font-family: "{font_family()}"; font-size: 13px; selection-background-color: {C.PRI_DIM};
+        }}
         QScrollArea {{ background: {C.DARK}; border: none; }}
         QScrollBar:vertical, QScrollBar:horizontal {{ background: {C.DARK}; border: none; }}
         QScrollBar::handle {{ background: {C.BORDER_B}; border-radius: 3px; min-height: 24px; min-width: 24px; }}

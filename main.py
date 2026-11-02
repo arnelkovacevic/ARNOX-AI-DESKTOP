@@ -553,7 +553,11 @@ TOOL_DECLARATIONS = [
             "properties": {
                 "file_path": {"type": "STRING", "description": "Path or file name of the PDF, CSV, Excel, or HTML file. Empty uses the file the user dropped in."},
                 "url": {"type": "STRING", "description": "https address to show in the workspace, e.g. https://www.youtube.com."},
-                "view": {"type": "STRING", "enum": ["inbox", "unread", "agenda"], "description": "Show Gmail inbox, unread mail, or the calendar agenda as a table in the workspace. Uses the connected Google account; no browser login."}
+                "view": {"type": "STRING", "enum": ["inbox", "unread", "agenda", "message"], "description": "inbox, unread, agenda: Gmail or calendar lists in the workspace. message: open one email, laid out like a real mail, in the workspace. Uses the connected Google account; no browser login."},
+                "sender": {"type": "STRING", "description": "For view=message: show the newest email from this sender (name or address)."},
+                "subject": {"type": "STRING", "description": "For view=message: show the newest email whose subject matches."},
+                "number": {"type": "INTEGER", "description": "For view=message: the row number in the inbox last shown (1 is the top)."},
+                "message_id": {"type": "STRING", "description": "For view=message: an exact Gmail message ID."}
             },
             "required": []
         }
@@ -1692,10 +1696,18 @@ class JarvisLive:
                 raw_view = str(args.get("view") or "").strip().lower()
                 raw_url = str(args.get("url") or "").strip()
                 if raw_view:
-                    if not callable(getattr(self.ui, "workspace_open_data", None)):
-                        result = "Mail and calendar tables are only shown in the desktop app's workspace."
+                    if not callable(getattr(self.ui, "workspace_show_data", None)):
+                        result = "Mail and calendar views are only shown in the desktop app's workspace."
                     else:
-                        result = await asyncio.to_thread(lambda: self.ui.workspace_open_data(raw_view))
+                        from ui_workspace import data_views
+
+                        options = {key: args.get(key) for key in ("sender", "subject", "number", "message_id", "days")}
+                        try:
+                            kind, payload, title, text = await asyncio.to_thread(lambda: data_views.fetch(raw_view, options))
+                            await asyncio.to_thread(lambda: self.ui.workspace_show_data(kind, payload, title))
+                            result = text
+                        except Exception as exc:
+                            result = f"Could not show that: {exc}"
                 elif raw_url:
                     if not callable(getattr(self.ui, "workspace_open_web", None)):
                         result = "Web pages can only be shown in the desktop app's workspace."

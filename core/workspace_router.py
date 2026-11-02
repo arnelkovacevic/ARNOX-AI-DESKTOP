@@ -76,14 +76,14 @@ def normalize_web_target(value: str) -> tuple[str | None, str]:
     return None, f"Only https addresses (or http on localhost) can be opened, not '{scheme or raw}'."
 
 
-DATA_VIEWS = ("inbox", "unread", "agenda")
+DATA_VIEWS = ("inbox", "unread", "agenda", "message")
 
 
 def route_data(view: str) -> Route:
     """Route a Gmail or Calendar view to a table tab. Only known views are accepted."""
     key = str(view or "").strip().lower()
     if key not in DATA_VIEWS:
-        return Route("unsupported", key, key, f"Unknown view '{key}'. Use inbox, unread, or agenda.")
+        return Route("unsupported", key, key, f"Unknown view '{key}'. Use inbox, unread, agenda, or message.")
     return Route("data", key, key)
 
 

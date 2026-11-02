@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
 
 from core.workspace_router import Route, classify_file, route_data, route_web
 from ui_workspace import theme
+from ui_workspace.mail_tabs import CalendarTab, InboxTab, MessageTab
 from ui_workspace.pdf_tab import PdfTab
 from ui_workspace.table_tab import TableTab
 from ui_workspace.web_tab import WebTab
@@ -19,6 +20,7 @@ MAX_TABS = 12
 class WorkspaceView(QWidget):
     hide_requested = pyqtSignal()    # user pressed "Back to core"
     emptied = pyqtSignal()           # the last tab was closed
+    message_requested = pyqtSignal(str)   # a row in the inbox was opened
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -75,8 +77,33 @@ class WorkspaceView(QWidget):
         self._fade.start()
 
     # ----- opening and closing ---------------------------------------------------------------
-    def open_data(self, view: str) -> str:
-        return self.open_route(route_data(view))
+    def show_data(self, kind: str, payload, title: str) -> str:
+        """Show data already loaded elsewhere (in a worker thread), so the window never blocks on the network."""
+        key = f"data:{kind}" if kind != "message" else f"data:message:{payload.get('id', '')}"
+        existing = self._index_of(key)
+        if existing is not None:
+            if kind == "message":
+                self._tabs.setCurrentIndex(existing)
+                return f"{title} is already open. Switched to it."
+            self.close_tab(existing)   # a refreshed inbox or agenda replaces the old tab
+        if self._tabs.count() >= MAX_TABS:
+            self.close_tab(0)
+        if kind == "inbox":
+            widget = InboxTab(payload, title)
+            widget.open_requested.connect(self._request_message)
+        elif kind == "agenda":
+            widget = CalendarTab(payload, title)
+        elif kind == "message":
+            widget = MessageTab(payload)
+        else:
+            return f"Cannot show '{kind}'."
+        widget.setProperty("route_target", key)
+        index = self._tabs.addTab(widget, title)
+        self._tabs.setCurrentIndex(index)
+        return f"{title} shown in the workspace."
+
+    def _request_message(self, message_id: str) -> None:
+        self.message_requested.emit(message_id)
 
     def open_web(self, address: str) -> str:
         """Show an https page (or http on localhost) in a web tab."""
@@ -104,19 +131,6 @@ class WorkspaceView(QWidget):
             return f"{route.title} is already open. Switched to it."
         if self._tabs.count() >= MAX_TABS:
             self.close_tab(0)
-        if route.kind == "data":
-            from ui_workspace.data_views import VIEWS
-
-            title, build = VIEWS[route.target]
-            try:
-                frame = build(25, 14)
-            except Exception as exc:
-                return f"Could not load {title}: {exc}"
-            widget = TableTab(f"data:{route.target}", frame=frame, title=title)
-            widget.setProperty("route_target", f"data:{route.target}")
-            index = self._tabs.addTab(widget, title)
-            self._tabs.setCurrentIndex(index)
-            return f"{title} shown in the workspace ({len(frame)} row(s))."
         if route.kind == "web":
             widget = WebTab(route.target, popup_handler=self._open_popup_tab)
         elif route.kind == "html":

@@ -6780,6 +6780,7 @@ class MainWindow(QMainWindow):
         self._workspace = WorkspaceView()
         self._workspace.hide_requested.connect(self.hide_workspace)
         self._workspace.emptied.connect(self.hide_workspace)
+        self._workspace.message_requested.connect(self._open_message_from_inbox)
         self._center_stack = QStackedWidget()
         self._center_stack.addWidget(self._ai_core_wrap)
         self._center_stack.addWidget(self._workspace)
@@ -7478,11 +7479,30 @@ class MainWindow(QMainWindow):
             self.show_workspace()
         return message
 
-    def open_workspace_data(self, view: str) -> str:
-        message = self._workspace.open_data(view)
+    def open_workspace_view(self, kind: str, payload, title: str) -> str:
+        """Show data that a worker thread already loaded (inbox, agenda, or one message)."""
+        message = self._workspace.show_data(kind, payload, title)
         if self._workspace.tab_count():
             self.show_workspace()
         return message
+
+    def _open_message_from_inbox(self, message_id: str) -> None:
+        """A row in the inbox was opened: fetch the message off the GUI thread, then show the reader."""
+        import threading
+        from concurrent.futures import Future
+
+        def work():
+            try:
+                from ui_workspace import data_views
+
+                message = data_views.gmail_message(message_id)
+                title = str(message["subject"])[:28] or "Message"
+                action = lambda: self.open_workspace_view("message", message, title)
+            except Exception as exc:
+                action = lambda: self._log.append_log(f"SYS: Could not open that message: {exc}")
+            self._workspace_sig.emit({"fn": action, "future": Future()})
+
+        threading.Thread(target=work, daemon=True).start()
 
     def open_workspace_web(self, address: str) -> str:
         message = self._workspace.open_web(address)
@@ -9513,9 +9533,9 @@ class JarvisUI:
         """Thread-safe access to secondary interface utilities."""
         self._win._ui_command_sig.emit(action)
 
-    def workspace_open_data(self, view: str) -> str:
-        """Show Gmail inbox, unread mail, or the calendar agenda as a table. Safe from any thread."""
-        return self._call_on_gui_thread(lambda: self._win.open_workspace_data(view))
+    def workspace_show_data(self, kind: str, payload, title: str) -> str:
+        """Show an inbox, agenda, or message that was loaded in the caller's thread. Safe from any thread."""
+        return self._call_on_gui_thread(lambda: self._win.open_workspace_view(kind, payload, title))
 
     def workspace_open_web(self, address: str) -> str:
         """Show an https page in the embedded workspace. Safe to call from any thread."""

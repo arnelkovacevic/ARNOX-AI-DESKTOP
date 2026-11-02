@@ -81,22 +81,22 @@ class DataViewWorkspaceTests(unittest.TestCase):
     def setUpClass(cls):
         cls.app = QApplication.instance() or QApplication(sys.argv[:1] or ["arnox"])
 
-    def test_workspace_shows_inbox_as_a_table_tab(self):
+    def test_workspace_shows_inbox_as_a_list_tab(self):
         frame = data_views.pandas.DataFrame([{"from": "a", "subject": "s", "date": "d", "unread": "", "id": "1"}],
                                             columns=data_views.MAIL_COLUMNS)
         view = WorkspaceView()
-        with mock.patch.dict(data_views.VIEWS, {"inbox": ("Inbox", lambda limit, days: frame)}):
-            message = view.open_data("inbox")
-        self.assertIn("Inbox shown", message)
+        self.assertIn("Inbox shown", view.show_data("inbox", frame, "Inbox"))
         self.assertEqual(view.tab_titles(), ["Inbox"])
         self.assertEqual(view.current_widget().total_rows(), 1)
         view.close_all()
 
-    def test_failed_load_is_reported_without_a_tab(self):
+    def test_reshowing_the_inbox_replaces_the_old_tab(self):
+        frame = data_views.pandas.DataFrame([], columns=data_views.MAIL_COLUMNS)
         view = WorkspaceView()
-        with mock.patch.dict(data_views.VIEWS, {"agenda": ("Calendar", mock.Mock(side_effect=RuntimeError("offline")))}):
-            self.assertIn("Could not load Calendar", view.open_data("agenda"))
-        self.assertEqual(view.tab_count(), 0)
+        view.show_data("inbox", frame, "Inbox")
+        view.show_data("inbox", frame, "Inbox")
+        self.assertEqual(view.tab_titles(), ["Inbox"])
+        view.close_all()
 
 
 class ToolTests(unittest.TestCase):
@@ -105,17 +105,20 @@ class ToolTests(unittest.TestCase):
         shown = []
         live.ui = SimpleNamespace(
             muted=True, current_file=None, set_state=lambda *_: None, write_log=lambda *_: None,
-            workspace_open_data=lambda view: shown.append(view) or "Inbox shown.",
+            workspace_show_data=lambda kind, payload, title: shown.append((kind, title)),
         )
         live.cloud_safe = False
+        frame = data_views.pandas.DataFrame([{"from": "Alex <a@x.com>", "subject": "Hi", "date": "d", "unread": "yes", "id": "1"}],
+                                            columns=data_views.MAIL_COLUMNS)
         call = SimpleNamespace(name="workspace_open", args={"view": "inbox"}, id="1")
-        response = asyncio.run(live._execute_tool(call))
-        self.assertEqual(shown, ["inbox"])
-        self.assertEqual(response.response["result"], "Inbox shown.")
+        with mock.patch.object(data_views, "VIEWS", {"inbox": ("Inbox", lambda limit, days: frame)}):
+            response = asyncio.run(live._execute_tool(call))
+        self.assertEqual(shown, [("inbox", "Inbox")])
+        self.assertIn("1. Alex: Hi (unread)", response.response["result"])
 
     def test_tool_declares_the_views(self):
         decl = next(d for d in main.TOOL_DECLARATIONS if d["name"] == "workspace_open")
-        self.assertEqual(decl["parameters"]["properties"]["view"]["enum"], ["inbox", "unread", "agenda"])
+        self.assertEqual(decl["parameters"]["properties"]["view"]["enum"], ["inbox", "unread", "agenda", "message"])
 
 
 if __name__ == "__main__":
