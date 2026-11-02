@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 
 PDF_EXTS = {"pdf"}
 TABLE_EXTS = {"csv", "tsv", "xlsx", "xlsm", "xls"}
+HTML_EXTS = {"html", "htm"}
 MAX_VIEW_BYTES = 200 * 1024 * 1024
 
 # Apps ARNOX can later show in the web tab. Playback with DRM (Spotify) does not work in the
@@ -21,7 +22,7 @@ APP_URLS = {
 
 @dataclass(frozen=True)
 class Route:
-    kind: str          # "pdf" | "table" | "web" | "unsupported"
+    kind: str          # "pdf" | "table" | "html" | "web" | "unsupported"
     target: str        # resolved file path or normalized URL
     title: str
     reason: str = ""   # why a route is unsupported
@@ -43,9 +44,11 @@ def classify_file(path: str | Path) -> Route:
         return Route("pdf", str(file.resolve()), file.name)
     if ext in TABLE_EXTS:
         return Route("table", str(file.resolve()), file.name)
+    if ext in HTML_EXTS:
+        return Route("html", str(file.resolve()), file.name)
     return Route(
         "unsupported", str(file), file.name,
-        f".{ext or 'unknown'} files cannot be shown in the workspace yet. Supported: PDF, CSV, TSV, Excel (.xlsx, .xls).",
+        f".{ext or 'unknown'} files cannot be shown in the workspace yet. Supported: PDF, CSV, TSV, Excel, HTML.",
     )
 
 
@@ -71,3 +74,12 @@ def normalize_web_target(value: str) -> tuple[str | None, str]:
     if scheme == "http" and host in {"localhost", "127.0.0.1"}:
         return raw, ""
     return None, f"Only https addresses (or http on localhost) can be opened, not '{scheme or raw}'."
+
+
+def route_web(value: str) -> Route:
+    """Route an address to the web tab, or explain why it cannot be shown."""
+    url, error = normalize_web_target(value)
+    if url is None:
+        return Route("unsupported", str(value), str(value), error)
+    host = urlparse(url).hostname or url
+    return Route("web", url, host)

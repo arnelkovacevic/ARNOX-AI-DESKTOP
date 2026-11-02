@@ -7478,6 +7478,12 @@ class MainWindow(QMainWindow):
             self.show_workspace()
         return message
 
+    def open_workspace_web(self, address: str) -> str:
+        message = self._workspace.open_web(address)
+        if self._workspace.tab_count():
+            self.show_workspace()
+        return message
+
     def close_workspace_tab(self) -> str:
         return self._workspace.close_current()
 
@@ -9500,6 +9506,10 @@ class JarvisUI:
     def handle_ui_command(self, action: str):
         """Thread-safe access to secondary interface utilities."""
         self._win._ui_command_sig.emit(action)
+
+    def workspace_open_web(self, address: str) -> str:
+        """Show an https page in the embedded workspace. Safe to call from any thread."""
+        return self._call_on_gui_thread(lambda: self._win.open_workspace_web(address))
 
     def workspace_open_document(self, path: str) -> str:
         """Show a PDF, CSV or Excel file in the embedded workspace. Safe to call from any thread."""

@@ -125,9 +125,14 @@ class PureActionContractTests(unittest.TestCase):
         self.assertTrue(computer_settings._has_explicit_computer_power_target({}, "restart my computer", None))
 
     def test_weather_failure_is_returned_instead_of_raised(self):
-        with patch.object(weather_report.webbrowser, "open", return_value=False):
+        # Weather is a silent background lookup now: a failed search is reported as text, never raised,
+        # and no browser is opened.
+        from actions import silent_lookup
+
+        with patch.object(silent_lookup, "_ddg", side_effect=RuntimeError("offline")), \
+             patch.object(weather_report.webbrowser, "open", side_effect=AssertionError("no browser")):
             result = weather_report.weather_action({"city": "London"})
-        self.assertIn("couldn't open", result)
+        self.assertIn("could not run", result)
 
     def test_file_controller_is_confined_to_configured_safe_root(self):
         with tempfile.TemporaryDirectory() as directory:

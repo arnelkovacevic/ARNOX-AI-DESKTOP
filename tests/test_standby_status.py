@@ -20,7 +20,7 @@ class _NoSecrets:
 class StandbyStatusTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = QApplication.instance() or QApplication([])
+        cls.app = QApplication.instance() or QApplication(__import__("sys").argv[:1] or ["arnox"])
         cls.temp_dir = tempfile.TemporaryDirectory()
         temp_path = Path(cls.temp_dir.name)
         cls.patchers = [

@@ -25,7 +25,7 @@ class _NoSecrets:
 class WorkspaceIntegrationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = QApplication.instance() or QApplication([])
+        cls.app = QApplication.instance() or QApplication(__import__("sys").argv[:1] or ["arnox"])
         cls.temp_dir = tempfile.TemporaryDirectory()
         base = Path(cls.temp_dir.name)
         cls.patchers = [

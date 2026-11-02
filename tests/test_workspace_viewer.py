@@ -112,7 +112,7 @@ class LoaderTests(unittest.TestCase):
 class _QtCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = QApplication.instance() or QApplication([])
+        cls.app = QApplication.instance() or QApplication(__import__("sys").argv[:1] or ["arnox"])
         cls.tmp = tempfile.TemporaryDirectory()
         cls.dir = Path(cls.tmp.name)
         cls.pdf = cls._make_pdf(cls.dir / "contract.pdf", ["Invoice total 1234 EUR", "Payment terms net 30", "Invoice total 99 EUR"])

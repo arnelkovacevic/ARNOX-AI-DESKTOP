@@ -18,28 +18,21 @@ def weather_action(
     city = city.strip()
     when = (when or "today").strip()
 
-    search_query  = f"weather in {city} {when}"
-    url           = f"https://www.google.com/search?q={quote_plus(search_query)}"
+    # RULE 1 and silent lookup: the forecast is fetched in the background and returned as
+    # text. No browser or workspace is opened, so ARNOX answers without showing anything.
+    from actions.silent_lookup import silent_web_lookup
 
-    try:
-        opened = webbrowser.open(url)
-        if not opened:
-            raise RuntimeError("webbrowser.open returned False")
-    except Exception as e:
-        msg = f"I couldn't open the browser for the weather report: {e}"
-        _log(msg, player)
-        return msg
-
-    msg = f"Showing the weather for {city}, {when}, sir."
-    _log(msg, player)
+    search_query = f"weather in {city} {when}"
+    answer = silent_web_lookup(search_query)
+    _log(f"Background weather lookup for {city}, {when}.", player)
 
     if session_memory:
         try:
-            session_memory.set_last_search(query=search_query, response=msg)
+            session_memory.set_last_search(query=search_query, response=answer)
         except Exception:
             pass
 
-    return msg
+    return answer
 
 
 def _log(message: str, player=None) -> None:

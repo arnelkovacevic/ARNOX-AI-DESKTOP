@@ -15,7 +15,7 @@ import ui
 class GraphicsQualityTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = QApplication.instance() or QApplication([])
+        cls.app = QApplication.instance() or QApplication(__import__("sys").argv[:1] or ["arnox"])
         ui._load_bundled_fonts()
 
     def test_setting_is_persistent_and_preserves_other_preferences(self):

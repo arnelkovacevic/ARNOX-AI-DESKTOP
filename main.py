@@ -543,15 +543,16 @@ TOOL_DECLARATIONS = [
     {
         "name": "workspace_open",
         "description": (
-            "Shows a PDF, CSV, or Excel (.xlsx/.xls) file INSIDE the ARNOX window in its own tab, with search, zoom, "
-            "sorting and sheets, without opening any external program. Use it when the user says show, display, or open "
-            "a document in ARNOX or on screen. Web pages cannot be shown in the workspace yet. "
+            "Shows INSIDE the ARNOX window, in a tab, without any external program: a PDF, CSV, Excel, or HTML file "
+            "(file_path), or an https web page (url, e.g. Gmail at mail.google.com or a site). Use it whenever the user "
+            "asks to open, show, or display a document, web page, or site. Only https pages can be shown. "
             "To close the tab use jarvis_ui_control action=close_tab, and to go back to the core use hide_workspace."
         ),
         "parameters": {
             "type": "OBJECT",
             "properties": {
-                "file_path": {"type": "STRING", "description": "Path or file name of the PDF, CSV or Excel file. Empty uses the file the user dropped in."}
+                "file_path": {"type": "STRING", "description": "Path or file name of the PDF, CSV, Excel, or HTML file. Empty uses the file the user dropped in."},
+                "url": {"type": "STRING", "description": "https address to show in the workspace, e.g. https://mail.google.com or https://www.youtube.com."}
             },
             "required": []
         }
@@ -1686,9 +1687,15 @@ class JarvisLive:
                 result = r or f"Message sent to {args.get('receiver')}."
 
             elif name == "workspace_open":
+                raw_url = str(args.get("url") or "").strip()
                 raw_path = str(args.get("file_path") or "").strip() or str(getattr(self.ui, "current_file", "") or "")
-                if not raw_path:
-                    result = "Tell me which PDF, CSV or Excel file to show."
+                if raw_url:
+                    if not callable(getattr(self.ui, "workspace_open_web", None)):
+                        result = "Web pages can only be shown in the desktop app's workspace."
+                    else:
+                        result = await asyncio.to_thread(lambda: self.ui.workspace_open_web(raw_url))
+                elif not raw_path:
+                    result = "Tell me which document or web address to show."
                 elif not callable(getattr(self.ui, "workspace_open_document", None)):
                     result = "The workspace is only available in the desktop app."
                 else:

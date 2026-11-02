@@ -7,10 +7,11 @@ from PyQt6.QtWidgets import (
     QGraphicsOpacityEffect, QHBoxLayout, QLabel, QPushButton, QTabBar, QTabWidget, QToolButton, QVBoxLayout, QWidget,
 )
 
-from core.workspace_router import Route, classify_file
+from core.workspace_router import Route, classify_file, route_web
 from ui_workspace import theme
 from ui_workspace.pdf_tab import PdfTab
 from ui_workspace.table_tab import TableTab
+from ui_workspace.web_tab import WebTab
 
 MAX_TABS = 12
 
@@ -74,6 +75,18 @@ class WorkspaceView(QWidget):
         self._fade.start()
 
     # ----- opening and closing ---------------------------------------------------------------
+    def open_web(self, address: str) -> str:
+        """Show an https page (or http on localhost) in a web tab."""
+        route = route_web(address)
+        return self.open_route(route)
+
+    def _open_popup_tab(self):
+        """Pop-ups get a new WebTab inside the workspace, returned to Qt as the new page."""
+        tab = WebTab("about:blank", popup_handler=self._open_popup_tab)
+        index = self._tabs.addTab(tab, "New tab")
+        self._tabs.setCurrentIndex(index)
+        return tab.page()
+
     def open_document(self, path: str) -> str:
         """Show a file in a tab. Returns a short sentence ARNOX can say or display."""
         route = classify_file(path)
@@ -88,8 +101,17 @@ class WorkspaceView(QWidget):
             return f"{route.title} is already open. Switched to it."
         if self._tabs.count() >= MAX_TABS:
             self.close_tab(0)
-        widget = PdfTab(route.target) if route.kind == "pdf" else TableTab(route.target)
+        if route.kind == "web":
+            widget = WebTab(route.target, popup_handler=self._open_popup_tab)
+        elif route.kind == "html":
+            widget = WebTab(route.target, is_local_file=True, popup_handler=self._open_popup_tab)
+        else:
+            widget = PdfTab(route.target) if route.kind == "pdf" else TableTab(route.target)
         widget.setProperty("route_target", route.target)
+        if getattr(widget, "error", "") and route.kind in ("web", "html"):
+            message = widget.error
+            widget.deleteLater()
+            return message
         if getattr(widget, "error", ""):
             message = widget.error
             widget.deleteLater()

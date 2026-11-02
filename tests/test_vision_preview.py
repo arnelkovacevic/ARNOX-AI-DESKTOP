@@ -13,7 +13,7 @@ import ui
 class VisionPreviewTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = QApplication.instance() or QApplication([])
+        cls.app = QApplication.instance() or QApplication(__import__("sys").argv[:1] or ["arnox"])
         ui._load_bundled_fonts()
 
     def test_preview_tracks_source_and_lifecycle(self):

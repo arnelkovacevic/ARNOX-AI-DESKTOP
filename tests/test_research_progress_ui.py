@@ -11,7 +11,7 @@ import ui
 class ResearchProgressWidgetTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.app = QApplication.instance() or QApplication([])
+        cls.app = QApplication.instance() or QApplication(__import__("sys").argv[:1] or ["arnox"])
         ui._load_bundled_fonts()
 
     def test_widget_shows_real_phase_progress_and_completed_artifact(self):
