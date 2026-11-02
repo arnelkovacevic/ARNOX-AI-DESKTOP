@@ -1656,8 +1656,18 @@ class JarvisLive:
                     current_file = getattr(self.ui, "current_file", None)
                     if current_file:
                         args["path"] = current_file
-                r = await asyncio.to_thread(lambda: file_controller(parameters=args, player=self.ui))
-                result = r or "Done."
+                document_path = str(args.get("path") or args.get("name") or "")
+                if args.get("action", "").lower() == "open" and Path(document_path).suffix.lower() in {
+                    ".pdf", ".csv", ".tsv", ".xlsx", ".xlsm", ".xls",
+                }:
+                    # RULE 1: documents open inside ARNOX, never in an external program.
+                    if callable(getattr(self.ui, "workspace_open_document", None)):
+                        result = await asyncio.to_thread(lambda: self.ui.workspace_open_document(document_path))
+                    else:
+                        result = "Documents can only be opened inside the ARNOX workspace, which is not available here."
+                else:
+                    r = await asyncio.to_thread(lambda: file_controller(parameters=args, player=self.ui))
+                    result = r or "Done."
 
             elif name == "check_messages":
                 r = await asyncio.to_thread(

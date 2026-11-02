@@ -156,6 +156,20 @@ class WorkspaceIntegrationTests(unittest.TestCase):
         self.assertEqual(response.response["result"], "Opened it.")
         self.assertEqual(opened, [str(self.pdf)])
 
+    def test_rule_one_document_open_never_reaches_the_external_opener(self):
+        live = main.JarvisLive.__new__(main.JarvisLive)
+        opened = []
+        live.ui = SimpleNamespace(
+            muted=True, current_file=None, set_state=lambda *_: None, write_log=lambda *_: None,
+            workspace_open_document=lambda path: opened.append(path) or "Opened in workspace.",
+        )
+        live.cloud_safe = False
+        call = SimpleNamespace(name="file_controller", args={"action": "open", "path": str(self.pdf)}, id="1")
+        with patch.object(main, "file_controller", side_effect=AssertionError("external opener must not run")):
+            response = asyncio.run(live._execute_tool(call))
+        self.assertEqual(response.response["result"], "Opened in workspace.")
+        self.assertEqual(opened, [str(self.pdf)])
+
     def test_the_tool_without_workspace_support_says_so(self):
         live = main.JarvisLive.__new__(main.JarvisLive)
         live.ui = SimpleNamespace(muted=True, current_file=None, set_state=lambda *_: None, write_log=lambda *_: None)
