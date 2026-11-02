@@ -29,8 +29,32 @@ def normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+_LOCATION_WORDS = (
+    "on the desktop", "from the desktop", "on my desktop", "in the desktop", "desktop",
+    "on the downloads", "in downloads", "in my downloads", "downloads",
+    "in documents", "in my documents", "documents",
+    "na desktopu", "na desktop", "na scrivania", "sul desktop", "scrivania",
+)
+_FOLDER_PREFIX = re.compile(r"^(?:~|/[^ ]*)?/?(?:desktop|downloads|documents)/", re.IGNORECASE)
+
+
+def _strip_location(text: str) -> str:
+    """Remove folder paths and location phrases the user may add to a spoken name."""
+    text = str(text or "").strip()
+    text = re.sub(r"^~?/?(?:users/[^/]+/)?(?:desktop|downloads|documents)/", "", text, flags=re.IGNORECASE)
+    lowered = text.lower()
+    for phrase in sorted(_LOCATION_WORDS, key=len, reverse=True):
+        if lowered.endswith(" " + phrase) or lowered == phrase:
+            text = text[: len(text) - len(phrase)].strip()
+            lowered = text.lower()
+        pattern = re.compile(rf"\s+{re.escape(phrase)}\s+", re.IGNORECASE)
+        text = pattern.sub(" ", text).strip()
+        lowered = text.lower()
+    return text
+
+
 def _split_extension(query: str) -> tuple[str, str]:
-    cleaned = str(query or "").strip().strip("\"'")
+    cleaned = _strip_location(str(query or "").strip().strip("\"'"))
     suffix = Path(cleaned).suffix.lower().lstrip(".")
     if suffix in _KNOWN_EXTS:
         return cleaned[: -(len(suffix) + 1)], suffix

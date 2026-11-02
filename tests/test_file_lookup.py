@@ -65,3 +65,29 @@ class FileLookupTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class LocationPhraseTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self.tmp.name)
+        self.addCleanup(self.tmp.cleanup)
+        (self.root / "CV_Arnel_Kovacevic25.pdf").write_bytes(b"x")
+
+    def test_location_phrases_and_folder_prefixes_are_ignored(self):
+        for spoken in (
+            "CV_Arnel_Kovacevic25.pdf on the desktop",
+            "CV_Arnel_Kovacevic25.pdf na desktopu",
+            "CV_Arnel_Kovacevic25 na scrivania",
+            "Desktop/CV_Arnel_Kovacevic25.pdf",
+            "~/Desktop/CV_Arnel_Kovacevic25.pdf",
+            "CV arnel kovacevic 25 on my desktop",
+        ):
+            path, _ = find_file(spoken, [self.root])
+            self.assertIsNotNone(path, spoken)
+            self.assertEqual(path.name, "CV_Arnel_Kovacevic25.pdf", spoken)
+
+    def test_location_words_do_not_break_names_that_contain_them(self):
+        (self.root / "Desktop Icons Guide.pdf").write_bytes(b"x")
+        path, _ = find_file("Desktop Icons Guide", [self.root])
+        self.assertEqual(path.name, "Desktop Icons Guide.pdf")
