@@ -857,7 +857,7 @@ TOOL_DECLARATIONS = [
             "properties": {
                 "action": {
                     "type": "STRING",
-                    "enum": ["open_command_center", "close_command_center", "change_theme", "change_graphics_quality", "open_settings", "compact_mode", "fullscreen", "show_shortcuts"],
+                    "enum": ["open_command_center", "close_command_center", "change_theme", "change_graphics_quality", "open_settings", "compact_mode", "fullscreen", "show_shortcuts", "sleep"],
                     "description": "The interface action to perform."
                 },
                 "theme": {
@@ -1236,7 +1236,7 @@ class JarvisLive:
         self._tour_active = False
 
     def _on_text_command(self, text: str):
-        self.ui.notify_user_activity(text)
+        self.ui.notify_user_activity(text, typed=True)
         if not self._loop or not self.session:
             return
         asyncio.run_coroutine_threadsafe(self.send_text(text), self._loop)
@@ -1727,7 +1727,10 @@ class JarvisLive:
 
             elif name == "jarvis_ui_control":
                 action = str(args.get("action") or "").strip().lower()
-                if action == "change_theme":
+                if action == "sleep":
+                    self.ui.enter_sleep()
+                    result = "ARNOX is sleeping. The microphone is off. Typing or saying 'wake up' wakes ARNOX."
+                elif action == "change_theme":
                     theme = str(args.get("theme") or "").strip().lower()
                     allowed = {"arc_reactor", "stealth_red", "vibranium_purple", "nanotech_gold", "platinum"}
                     if theme not in allowed:
@@ -1825,7 +1828,7 @@ class JarvisLive:
         def callback(indata, frames, time_info, status):
             with self._speaking_lock:
                 jarvis_speaking = self._is_speaking
-            if not jarvis_speaking and not self.ui.muted:
+            if not jarvis_speaking and not self.ui.muted and not self.ui.sleeping:
                 data = indata.tobytes()
                 loop.call_soon_threadsafe(
                     self.out_queue.put_nowait,

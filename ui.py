@@ -3002,6 +3002,8 @@ class HudCanvas(QWidget):
         elif self.state == "PROCESSING":
             sym = "\u25b7" if self._blink else "\u25b6"
             txt, col = f"{sym}  EXECUTING",   qcol(C.ACC)
+        elif self.state == "SLEEPING":
+            txt, col = "\u263d  ARNOX IS SLEEPING \u2014 SAY OR TYPE 'WAKE UP'", qcol(C.PRI)
         elif self.state == "LISTENING":
             sym = "\u25cf" if self._blink else "\u25cb"
             txt, col = f"{sym}  LISTENING",   qcol(C.ENERGY)
@@ -6618,7 +6620,7 @@ class MainWindow(QMainWindow):
     _log_sig       = pyqtSignal(str)
     _state_sig     = pyqtSignal(str)
     _status_sig    = pyqtSignal(str)     # "normal" | "waiting" | "standby"
-    _activity_sig  = pyqtSignal(str)     # user speech or typed text, for wake/clear
+    _activity_sig  = pyqtSignal(str, bool)  # (text, typed): user speech or typed text
     _voice_sig     = pyqtSignal(str)
     _sub_sig       = pyqtSignal(str)
     _sub_clear_sig = pyqtSignal()
@@ -8507,9 +8509,12 @@ class MainWindow(QMainWindow):
     def _apply_status_theme(self, status: str):
         """Stages: reply_done (theme stays) -> waiting (yellow) -> standby (red)."""
         if status == "normal":
+            was_sleeping = self._status == "standby"
             self._idle_timer.stop()
             self._status = "normal"
             ThemeManager.set_theme(ThemeManager.current_name())
+            if was_sleeping:
+                self._apply_state("LISTENING")
             return
         if status == "reply_done":
             if self._status == "standby":
@@ -8529,12 +8534,13 @@ class MainWindow(QMainWindow):
             self._idle_timer.stop()
             self._status = "standby"
             ThemeManager.apply_status("standby")
+            self._apply_state("SLEEPING")
 
-    def _on_user_activity(self, text: str):
-        """Any reply clears yellow. Only the wake word 'Arnox' clears red standby."""
+    def _on_user_activity(self, text: str, typed: bool = False):
+        """Any reply clears yellow. Red sleep ends on typed input or the wake word."""
         lowered = str(text or "").lower()
         if self._status == "standby":
-            if WAKE_WORD in lowered:
+            if typed or WAKE_WORD in lowered:
                 self._apply_status_theme("normal")
             return
         if self._status == "waiting":
@@ -8549,6 +8555,7 @@ class MainWindow(QMainWindow):
             self._rail_mode_lbl.setText(f"LOCAL  /  {state}")
             rail_color = {
                 "MUTED": C.RED,
+                "SLEEPING": C.RED,
                 "THINKING": C.ACC2,
                 "PROCESSING": C.ACC2,
                 "SPEAKING": C.PRI,
@@ -8565,6 +8572,7 @@ class MainWindow(QMainWindow):
             self._header_mode_lbl.setText(state)
             state_color = {
                 "MUTED": C.RED,
+                "SLEEPING": C.RED,
                 "THINKING": C.ACC2,
                 "PROCESSING": C.ACC2,
                 "SPEAKING": C.PRI,
@@ -9211,9 +9219,17 @@ class JarvisUI:
         if not self.muted:
             self._win._status_sig.emit("reply_done")
 
-    def notify_user_activity(self, text: str):
-        """Called from voice and text input. Clears yellow and wakes red standby."""
-        self._win._activity_sig.emit(str(text or ""))
+    @property
+    def sleeping(self) -> bool:
+        return self._win._status == "standby"
+
+    def enter_sleep(self):
+        """Voice or tool request: go to red sleep, mic stops streaming."""
+        self._win._status_sig.emit("standby")
+
+    def notify_user_activity(self, text: str, typed: bool = False):
+        """Called from voice and text input. Clears yellow and wakes red sleep."""
+        self._win._activity_sig.emit(str(text or ""), bool(typed))
 
     def sync_voice_display(self, voice_name: str):
         self._win._voice_sig.emit(voice_name)
