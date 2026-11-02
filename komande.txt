@@ -59,7 +59,9 @@ Kontrola zvuka i prekid:
 Sleep / pauza (crveni mod, mikrofon isključen):
   "go to sleep", "standby", "vai in pausa", "modalità mute", "pauza", "spavaj"
   (na bilo kojem jeziku; ARNOX kratko potvrdi, pa ode u crveno)
-  Buđenje: ukucaj bilo šta u polje za unos, ili reci "Arnox" ako je mikrofon aktivan.
+  Buđenje: ukucaj bilo šta u polje za unos, ili reci "Arnox".
+  U sleep modu zvuk se NE šalje Googleu. Samo lokalni detektor na računaru sluša riječ "Arnox".
+  Ako se budi prerijetko ili prečesto, podesi prag: ARNOX_WAKE_THRESHOLD (npr. 1e-30 strože, 1e-50 osjetljivije).
   Automatski: 60 s tišine = žuta tema, 120 s = crvena (sleep).
 
 Gašenje aplikacije (samo na izričit zahtjev):

@@ -97,6 +97,7 @@ DEFAULT_VOICE_NAME   = "puck"
 RECEIVE_SAMPLE_RATE = 24000
 CHUNK_SIZE          = 1024
 LIVE_VAD_SILENCE_MS = 200
+WAKE_ARM_DELAY_SECONDS = 2.5   # after going to sleep, ignore the mic briefly (own goodbye)
 STARTUP_CLAPS_REQUIRED = 2
 STARTUP_CLAP_MAX_GAP_SECONDS = 4.0
 STARTUP_CLAP_COOLDOWN_SECONDS = 0.22
@@ -1236,7 +1237,7 @@ class JarvisLive:
         self._tour_active = False
 
     def _on_text_command(self, text: str):
-        self.ui.notify_user_activity(text, typed=True)
+        self._ui_notify("notify_user_activity", text, typed=True)
         if not self._loop or not self.session:
             return
         asyncio.run_coroutine_threadsafe(self.send_text(text), self._loop)
@@ -1728,6 +1729,8 @@ class JarvisLive:
             elif name == "jarvis_ui_control":
                 action = str(args.get("action") or "").strip().lower()
                 if action == "sleep":
+                    if not callable(getattr(self.ui, "enter_sleep", None)):
+                        raise ValueError("Sleep mode is only available in the desktop app.")
                     self.ui.enter_sleep()
                     result = "ARNOX is sleeping. The microphone is off. Typing or saying 'wake up' wakes ARNOX."
                 elif action == "change_theme":
@@ -1821,14 +1824,57 @@ class JarvisLive:
                 return
             await self.session.send_realtime_input(media=msg)
 
+    def _ui_notify(self, method: str, *args, **kwargs) -> None:
+        """Call an optional UI hook. Clients that lack sleep/activity support just ignore it."""
+        hook = getattr(self.ui, method, None)
+        if callable(hook):
+            hook(*args, **kwargs)
+
+    @staticmethod
+    def _create_wake_detector():
+        """Local 'Arnox' spotter used while sleeping. None when pocketsphinx is unavailable."""
+        try:
+            from core.wake_word import WakeWordDetector
+            detector = WakeWordDetector()
+            print("[ARNOX] 🌙 Local wake-word detector ready (audio stays on this computer while sleeping).")
+            return detector
+        except Exception as exc:
+            print(f"[ARNOX] ⚠️ Voice wake-up unavailable ({exc}). Type anything to wake ARNOX from sleep.")
+            return None
+
+    def _feed_wake_word(self, indata, jarvis_speaking: bool) -> None:
+        """While sleeping, listen locally for 'Arnox'. Nothing is sent to Gemini."""
+        detector = self._wake_detector
+        if detector is None or jarvis_speaking or self.ui.muted:
+            return
+        now = time.monotonic()
+        if self._sleep_started_at is None:
+            self._sleep_started_at = now
+            detector.reset()
+        heard = detector.feed(indata.tobytes())
+        # The detector adapts to the room during the first seconds, so audio is fed
+        # right away; hits are ignored while ARNOX's own goodbye may still be audible.
+        if now - self._sleep_started_at < WAKE_ARM_DELAY_SECONDS:
+            return
+        if heard:
+            self._sleep_started_at = None
+            print("[ARNOX] 🌅 Wake word heard.")
+            self._ui_notify("notify_user_activity", "arnox", typed=False)
+
     async def _listen_audio(self):
         print("[ARNOX] 🎤 Mic started")
         loop = asyncio.get_event_loop()
+        self._wake_detector = self._create_wake_detector()
+        self._sleep_started_at = None
 
         def callback(indata, frames, time_info, status):
             with self._speaking_lock:
                 jarvis_speaking = self._is_speaking
-            if not jarvis_speaking and not self.ui.muted and not self.ui.sleeping:
+            if getattr(self.ui, "sleeping", False):
+                self._feed_wake_word(indata, jarvis_speaking)
+                return
+            self._sleep_started_at = None
+            if not jarvis_speaking and not self.ui.muted:
                 data = indata.tobytes()
                 loop.call_soon_threadsafe(
                     self.out_queue.put_nowait,
@@ -1890,7 +1936,7 @@ class JarvisLive:
                                     self._current_input_transcript = ""
                                 in_buf.append(txt)
                                 self._current_input_transcript = " ".join(in_buf).strip()
-                                self.ui.notify_user_activity(self._current_input_transcript)
+                                self._ui_notify("notify_user_activity", self._current_input_transcript)
                                 if (
                                     not getattr(self, "_pending_self_quit", False)
                                     and self._is_explicit_self_quit_transcript(self._current_input_transcript)
@@ -1901,7 +1947,7 @@ class JarvisLive:
                             if self._turn_done_event:
                                 self._turn_done_event.set()
                             if out_buf:
-                                self.ui.notify_reply_finished()
+                                self._ui_notify("notify_reply_finished")
 
                             full_in = " ".join(in_buf).strip()
                             if full_in:

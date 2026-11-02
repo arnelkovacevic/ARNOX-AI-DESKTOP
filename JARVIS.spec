@@ -1,11 +1,14 @@
 # -*- mode: python ; coding: utf-8 -*-
+from PyInstaller.utils.hooks import collect_data_files
 
+# PocketSphinx ships its acoustic model as data files; the local wake word needs them.
+pocketsphinx_data = collect_data_files('pocketsphinx')
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('assets/fonts', 'assets/fonts'), ('core/prompt.txt', 'core')],
+    datas=[('assets/fonts', 'assets/fonts'), ('core/prompt.txt', 'core')] + pocketsphinx_data,
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

@@ -71,6 +71,20 @@ class WebSocketClient:
     def handle_ui_command(self, action: str) -> None:
         self._emit({"type": "ui_command", "action": action})
 
+    # Sleep/standby is a desktop-only feature (it controls the local microphone).
+    @property
+    def sleeping(self) -> bool:
+        return False
+
+    def enter_sleep(self) -> None:
+        return None
+
+    def notify_user_activity(self, text: str, typed: bool = False) -> None:
+        return None
+
+    def notify_reply_finished(self) -> None:
+        return None
+
     def show_research_progress(self, question: str) -> None:
         self._emit({"type": "progress", "kind": "research", "label": question, "percent": 0, "phase": "Queued"})
 
