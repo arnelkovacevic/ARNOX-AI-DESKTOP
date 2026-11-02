@@ -25,6 +25,7 @@ from PyQt6.QtGui import (
     QPainterPath, QPen, QPixmap, QRadialGradient, QShortcut,
 )
 from PyQt6.QtWidgets import (
+    QMessageBox,
     QApplication, QComboBox, QCheckBox, QFormLayout, QFrame, QGraphicsOpacityEffect,
     QGroupBox, QHBoxLayout, QLabel, QLineEdit, QMainWindow, QMenu, QPushButton,
     QScrollArea, QSizePolicy, QSpinBox, QSplitter, QStackedWidget, QSystemTrayIcon, QTextEdit,
@@ -6618,6 +6619,7 @@ class MainWindow(QMainWindow):
 
 
     _log_sig       = pyqtSignal(str)
+    _fullscreen_locked = False            # class default: changeEvent can fire during construction
     _state_sig     = pyqtSignal(str)
     _status_sig    = pyqtSignal(str)     # "normal" | "waiting" | "standby"
     _activity_sig  = pyqtSignal(str, bool)  # (text, typed): user speech or typed text
@@ -6823,6 +6825,7 @@ class MainWindow(QMainWindow):
         self._log_sig.connect(self._log.append_log)
         self._state_sig.connect(self._apply_state)
         self._status        = "normal"
+        self._fullscreen_locked = False
         self._idle_timer    = QTimer(self)
         self._idle_timer.setSingleShot(True)
         self._idle_timer.timeout.connect(self._on_idle_timeout)
@@ -6914,6 +6917,8 @@ class MainWindow(QMainWindow):
         sc_mute.activated.connect(self._toggle_mute)
         sc_full = QShortcut(QKeySequence("F11"), self)
         sc_full.activated.connect(self._toggle_fullscreen)
+        sc_unlock = QShortcut(QKeySequence("Ctrl+Alt+U"), self)
+        sc_unlock.activated.connect(self.unlock_fullscreen)
         sc_min = QShortcut(QKeySequence(Qt.Key.Key_F6), self)
         sc_min.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         sc_min.activated.connect(lambda: _minimize_or_restore(self))
@@ -6940,6 +6945,9 @@ class MainWindow(QMainWindow):
         sc_show_right = QShortcut(QKeySequence("R"), self)
         sc_show_right.activated.connect(self._show_right_panel_popup)
     def closeEvent(self, event):
+        if self._fullscreen_locked and not getattr(self, "_force_quit", False):
+            event.ignore()
+            return
         # Minimize to tray instead of quitting (if tray is available)
         try:
             if hasattr(self, "_tray") and self._tray.isVisible() and not getattr(self, "_force_quit", False):
@@ -7273,6 +7281,7 @@ class MainWindow(QMainWindow):
             "open_settings": self._show_settings,
             "compact_mode": self._toggle_compact_mode,
             "fullscreen": self._toggle_fullscreen,
+            "lock_fullscreen": self.lock_fullscreen,
             "show_shortcuts": self._toggle_shortcuts_overlay,
         }
         handler = handlers.get(action)
@@ -7420,7 +7429,71 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
+    def lock_fullscreen(self):
+        """Keep ARNOX fullscreen and in front until the user unlocks it."""
+        self._fullscreen_locked = True
+        self.showFullScreen()
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+        self.show()
+        self._set_kiosk(True)
+        self.raise_()
+        self.activateWindow()
+        self._log.append_log("SYS: Fullscreen locked. Ctrl+Alt+U unlocks it.")
+
+    def unlock_fullscreen(self):
+        """Only called from the user's own keyboard shortcut or menu, never from a model tool."""
+        if not self._fullscreen_locked:
+            return
+        answer = QMessageBox.question(
+            self, "Unlock ARNOX",
+            "Unlock fullscreen and allow other windows over ARNOX?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        self._fullscreen_locked = False
+        self._set_kiosk(False)
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, False)
+        self.show()
+        self.showNormal()
+        self._log.append_log("SYS: Fullscreen unlocked.")
+
+    def _set_kiosk(self, on: bool) -> None:
+        """macOS only: hide the dock and menu bar and disable Cmd+Tab while locked."""
+        if sys.platform != "darwin":
+            return
+        try:
+            import AppKit
+        except Exception:
+            return
+        options = (
+            AppKit.NSApplicationPresentationHideDock
+            | AppKit.NSApplicationPresentationHideMenuBar
+            | AppKit.NSApplicationPresentationDisableProcessSwitching
+            | AppKit.NSApplicationPresentationDisableHideApplication
+        ) if on else AppKit.NSApplicationPresentationDefault
+        AppKit.NSApplication.sharedApplication().setPresentationOptions_(options)
+
+    def _reclaim_focus(self):
+        if not self._fullscreen_locked:
+            return
+        if not self.isFullScreen():
+            self.showFullScreen()
+        self.raise_()
+        self.activateWindow()
+
+    def changeEvent(self, event):
+        super().changeEvent(event)
+        if self._fullscreen_locked and event.type() == QEvent.Type.WindowStateChange:
+            QTimer.singleShot(0, self._reclaim_focus)
+        elif self._fullscreen_locked and event.type() == QEvent.Type.ActivationChange and not self.isActiveWindow():
+            QTimer.singleShot(150, self._reclaim_focus)
+
     def _toggle_fullscreen(self):
+        if self._fullscreen_locked:
+            self._log.append_log("SYS: Fullscreen is locked. Unlock with Ctrl+Alt+U.")
+            return
         if self.isFullScreen():
             self.showNormal()
         else:
@@ -7847,6 +7920,8 @@ class MainWindow(QMainWindow):
         self._utility_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self._utility_menu = QMenu(self._utility_btn)
         self._utility_menu.addAction("Fullscreen", self._toggle_fullscreen)
+        self._utility_menu.addAction("Lock fullscreen", self.lock_fullscreen)
+        self._utility_menu.addAction("Unlock fullscreen (Ctrl+Alt+U)", self.unlock_fullscreen)
         self._utility_menu.addAction("Settings", self._show_settings)
         self._utility_menu.addAction("Compact Mode", self._toggle_compact_mode)
         self._utility_menu.addSeparator()

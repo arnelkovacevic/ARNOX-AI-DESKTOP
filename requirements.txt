@@ -47,3 +47,4 @@ elevenlabs
 openai
 soundfile
 pocketsphinx
+pyobjc-framework-Cocoa; sys_platform == "darwin"
