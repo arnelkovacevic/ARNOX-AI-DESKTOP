@@ -36,6 +36,10 @@ class MailActions(QObject):
         def target():
             try:
                 ok, message = work()
+                if ok and action == "send":
+                    from actions import email_control
+
+                    email_control._clear_pending_email()   # sent from the window: nothing is left to approve
             except Exception as exc:
                 ok, message = False, f"{action} failed: {exc}"
             self.done.emit(action, bool(ok), str(message), key)

@@ -180,6 +180,19 @@ def download_attachment(message_id: str, attachment: dict) -> str:
     return str(target)
 
 
+def _register_pending(draft: dict) -> None:
+    """The draft the user sees in the workspace is also the pending email, so 'send it' by voice works."""
+    email_control._set_pending_email({
+        "to": email_control._normalize_recipients(draft.get("to", "")),
+        "cc": email_control._normalize_recipients(draft.get("cc", "")), "bcc": "",
+        "subject": str(draft.get("subject", "")), "body": str(draft.get("body", "")).strip(),
+        "provider": "gmail", "delivery": "gmail_api",
+        "thread_id": str(draft.get("thread_id", "")), "in_reply_to": str(draft.get("in_reply_to", "")),
+        "references": str(draft.get("references", "")),
+        "attachments": [dict(item) for item in draft.get("attachments", []) or []],
+    })
+
+
 def compose_payload(options: dict) -> dict:
     """Pre-filled draft for the compose window. Nothing is sent: the user reviews it and presses Send."""
     payload = {
@@ -273,16 +286,20 @@ def fetch(view: str, options: dict | None = None) -> tuple[str, object, str, str
         if not message_id:
             raise ValueError("Open the mail you want to forward first.")
         draft = forward_payload(gmail_message(message_id), str(options.get("to") or ""), str(options.get("body") or ""))
+        _register_pending(draft)
         names = ", ".join(item["filename"] for item in draft["attachments"]) or "no attachments"
         return "compose", draft, "Forward", (
-            f"A forward draft is open in the workspace with {names}. Nothing has been sent. The user adds the recipient and presses Send."
+            f"A forward draft is open in the workspace with {names}. Nothing has been sent yet. "
+            "When the user says send it, call email_control action=approve (with to=<recipient> if the draft has none)."
         )
     if key in ("compose", "reply"):
         draft = compose_payload({**options, "reply": key == "reply"})
+        _register_pending(draft)
         text = (
-            "A draft is open in the workspace. Nothing has been sent. The user reviews it and presses Send."
+            "A draft is open in the workspace. Nothing has been sent. When the user says send it, call email_control action=approve."
             if key == "compose" else
-            f"A reply to '{draft['to']}' is open in the workspace with the draft text. Nothing has been sent. The user presses Send."
+            f"A reply to '{draft['to']}' is open in the workspace with the draft text. Nothing has been sent yet. "
+            "When the user says send it, call email_control action=approve."
         )
         return "compose", draft, "Reply" if key == "reply" else "New mail", text
     if key == "agenda":

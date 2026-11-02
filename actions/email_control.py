@@ -453,6 +453,14 @@ def _gmail_send_core(draft: dict[str, str]) -> tuple[bool, str]:
 
 
 def _send_gmail(draft: dict[str, str]) -> str:
+    draft = dict(draft)
+    if not str(draft.get("to", "")).strip():
+        return "The draft has no recipient yet. Tell me who to send it to, or fill in the To field."
+    if draft.get("attachments") and not all("data" in item for item in draft["attachments"]):
+        try:
+            draft["attachments"] = _collect_forwarded(draft["attachments"])
+        except Exception as exc:
+            return f"Could not attach the files: {exc}"
     ok, message = _gmail_send_core(draft)
     if ok:
         _clear_pending_email()
@@ -1181,6 +1189,65 @@ end run
     return f"Subject: {subject or '(No subject)'}\nFrom: {sender}\nReceived: {received}\n\n{content}"
 
 
+def _prepare_reply_or_forward(action: str, params: dict, player=None) -> str:
+    """Draft an answer or a forward of the mail just read. Recipient, subject and thread come from that mail."""
+    from ui_workspace import data_views
+
+    message_id = str(params.get("message_id", "")).strip() or _LAST_READ_MESSAGE_ID
+    if not message_id:
+        return "Open or read the mail first, then I can reply to it or forward it."
+    try:
+        original = data_views.gmail_message(message_id)
+    except GmailConnectionError as exc:
+        return str(exc)
+    except Exception as exc:
+        return _gmail_api_error(exc, "reading the mail to answer")
+    body = str(params.get("body", "")).strip()
+    if action == "reply":
+        if not body:
+            return "Tell me what the reply should say."
+        draft = data_views.reply_payload(original, body, str(params.get("to", "")).strip())
+    else:
+        to = str(params.get("to", "")).strip()
+        if not to:
+            return "Tell me who to forward it to."
+        draft = data_views.forward_payload(original, to, body)
+    if params.get("cc"):
+        draft["cc"] = str(params["cc"])
+    return _prepare_email({**draft, "provider": "gmail"}, player=player)
+
+
+def pending_as_compose() -> dict | None:
+    """The pending draft in the shape of the workspace compose window, or None."""
+    draft = _get_pending_email()
+    if not draft:
+        return None
+    return {
+        "to": draft.get("to", ""), "cc": draft.get("cc", ""), "subject": draft.get("subject", ""),
+        "body": draft.get("body", ""), "thread_id": draft.get("thread_id", ""),
+        "in_reply_to": draft.get("in_reply_to", ""), "references": draft.get("references", ""),
+        "attachments": [dict(item) for item in draft.get("attachments", []) or []],
+    }
+
+
+def update_pending_from_compose(fields: dict) -> None:
+    """Make the pending draft match what the user sees in the compose window (they may have edited it)."""
+    draft = _get_pending_email()
+    if not draft or not fields:
+        return
+    recipients = _normalize_recipients(fields.get("to", ""))
+    if recipients:
+        draft["to"] = recipients
+    draft["cc"] = _normalize_recipients(fields.get("cc", ""))
+    if str(fields.get("subject", "")).strip():
+        draft["subject"] = re.sub(r"[\r\n]+", " ", str(fields["subject"])).strip()
+    if str(fields.get("body", "")).strip():
+        draft["body"] = str(fields["body"]).strip()
+    if "attachments" in fields:
+        draft["attachments"] = [dict(item) for item in fields["attachments"] or []]
+    _set_pending_email(draft)
+
+
 def _prepare_email(params: dict, player=None) -> str:
     to = _normalize_recipients(params.get("to", ""))
     cc = _normalize_recipients(params.get("cc", ""))
@@ -1188,7 +1255,10 @@ def _prepare_email(params: dict, player=None) -> str:
     subject = re.sub(r"[\r\n]+", " ", str(params.get("subject", ""))).strip()
     body = str(params.get("body", "")).strip()
     if not to:
-        return "A valid recipient email address is required."
+        return (
+            "A valid recipient email address is required. To answer the mail that was just read or opened, "
+            "use action=reply (no address needed). To forward it, use action=forward with the recipient."
+        )
     if not subject:
         return "An email subject is required."
     if not body:
@@ -1212,6 +1282,8 @@ def _prepare_email(params: dict, player=None) -> str:
         for key in ("thread_id", "in_reply_to", "references"):
             if params.get(key):
                 draft[key] = str(params[key])
+        if params.get("attachments"):
+            draft["attachments"] = [dict(item) for item in params["attachments"]]
     _set_pending_email(draft)
     preview = body if len(body) <= 800 else body[:800].rstrip() + "…"
     copies = (f"\nCc: {cc}" if cc else "") + (f"\nBcc: {bcc}" if bcc else "")
@@ -1219,8 +1291,10 @@ def _prepare_email(params: dict, player=None) -> str:
         "EMAIL_APPROVAL_REQUIRED|A pending email is ready. Nothing has been sent.\n"
         + ("The draft is held inside ARNOX. Nothing opened outside the app.\n" if provider == "gmail" else "")
         + f"Provider: {'Gmail' if provider == 'gmail' else 'Apple Mail' if provider == 'apple_mail' else 'Default mail app'}\n"
-        f"To: {to}{copies}\nSubject: {subject}\n\n{preview}\n\n"
-        "Ask the user to approve, revise, or cancel this exact email."
+        f"To: {to}{copies}\nSubject: {subject}\n"
+        + (f"Attachments: {', '.join(str(a.get('filename', 'file')) for a in draft.get('attachments', []))}\n" if draft.get("attachments") else "")
+        + f"\n{preview}\n\n"
+        "Ask the user to approve, revise, or cancel this exact email. When the user says send it, call action=approve."
     )
 
 
@@ -1720,12 +1794,17 @@ def email_control(parameters: dict | None = None, response=None, player=None, se
         if _SYSTEM == "Darwin" and provider == "apple_mail":
             return _read_macos(message_id)
         return "Email reading for this provider is unavailable."
+    if action in {"reply", "forward"}:
+        return _prepare_reply_or_forward(action, params, player)
     if action == "prepare":
         return _prepare_email(params, player=player)
     if action == "approve":
         draft = _get_pending_email()
         if not draft:
             return "There is no pending email to approve."
+        if params.get("to"):
+            draft["to"] = _normalize_recipients(params["to"]) or draft.get("to", "")
+            _set_pending_email(draft)
         draft_provider = draft.get("provider", "gmail")
         if draft.get("delivery") == "gmail_web":
             return _gmail_web_send(draft)

@@ -498,7 +498,10 @@ TOOL_DECLARATIONS = [
         "name": "email_control",
         "description": (
             "Connects Gmail through Google OAuth, checks connection status, reads/searches Gmail, manages folders, "
-            "drafts, stars, read state and the trash, and prepares email. Attachments are handled by email_attachment. "
+            "drafts, stars, read state and the trash, and prepares email. To ANSWER the mail just read use action=reply with body "
+            "(the recipient, subject and thread come from that mail, so no address is needed); to FORWARD it use action=forward with to. "
+            "Use action=prepare only for a brand-new mail. Replies, forwards and new mails stay as a draft until the user says send it, "
+            "then call action=approve. Attachments are handled by email_attachment. "
             "Gmail is the default provider; Apple Mail remains an optional macOS fallback. "
             "For Gmail, prepare opens a visible compose window and types To, Cc/Bcc, Subject, and Body in sequence. "
             "Every outgoing email is approval-gated: first call action=prepare, then call action=approve "
@@ -509,7 +512,7 @@ TOOL_DECLARATIONS = [
             "properties": {
                 "action": {
                     "type": "STRING",
-                    "enum": ["connect", "status", "disconnect", "inbox", "unread", "search", "read", "prepare", "approve", "cancel", "folders", "folder", "mark_read", "mark_unread", "star", "unstar", "archive", "trash", "untrash", "draft_list", "draft_create", "draft_update", "draft_delete", "attachments", "attachment_read", "attachment_save"],
+                    "enum": ["connect", "status", "disconnect", "inbox", "unread", "search", "read", "prepare", "reply", "forward", "approve", "cancel", "folders", "folder", "mark_read", "mark_unread", "star", "unstar", "archive", "trash", "untrash", "draft_list", "draft_create", "draft_update", "draft_delete", "attachments", "attachment_read", "attachment_save"],
                     "description": "Email operation."
                 },
                 "provider": {
@@ -1798,8 +1801,26 @@ class JarvisLive:
                     current_file = getattr(self.ui, "current_file", None)
                     if current_file and Path(str(current_file)).suffix.lower() == ".json":
                         args["credentials_path"] = current_file
+                from actions import email_control as _mail
+
+                mail_action = str(args.get("action", "")).lower()
+                has_workspace = callable(getattr(self.ui, "workspace_show_data", None))
+                if mail_action == "approve" and callable(getattr(self.ui, "workspace_compose_fields", None)):
+                    # The user may have edited the draft in the window: send what they see.
+                    live = await asyncio.to_thread(lambda: self.ui.workspace_compose_fields())
+                    if live:
+                        _mail.update_pending_from_compose(live)
                 r = await asyncio.to_thread(lambda: email_control(parameters=args, response=None, player=self.ui, session_memory=None))
                 result = r or "Email action completed."
+                if has_workspace and str(result).startswith("EMAIL_APPROVAL_REQUIRED"):
+                    draft = _mail.pending_as_compose()
+                    if draft:
+                        title = {"reply": "Reply", "forward": "Forward"}.get(mail_action, "New mail")
+                        await asyncio.to_thread(lambda: self.ui.workspace_show_data("compose", draft, title))
+                if callable(getattr(self.ui, "workspace_close_compose", None)) and (
+                    str(result).startswith("Email sent") or str(result).startswith("Pending email cancelled")
+                ):
+                    await asyncio.to_thread(lambda: self.ui.workspace_close_compose())
 
             elif name == "reminder":
                 r = await asyncio.to_thread(lambda: reminder(parameters=args, response=None, player=self.ui))

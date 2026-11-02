@@ -133,8 +133,11 @@ Mail i kalendar u workspaceu (preko povezanog Google naloga, bez prijave u pregl
   "restore that email"                   vraća iz smeća u inbox (ili dugme "Restore to inbox" u čitaču)
 
   Pisanje i odgovaranje (sve u ARNOX prozoru, bez Chromea):
-  "write a mail to Alex saying ..."      otvara prozor za pisanje s popunjenim nacrtom. Ništa se ne šalje dok ti ne pritisneš SEND.
-  "reply to this email saying ..."       otvara odgovor (isti thread) s tekstom i citatom, ti pritisneš SEND
+  "write a mail to Alex saying ..."      otvara prozor za pisanje s popunjenim nacrtom, ARNOX ga pročita
+  "reply to this email saying ..."       odgovor na mail koji je otvoren: primalac, naslov i nit se popune SAMI (adresa se ne govori)
+  "forward this to Bob"                  proslijedi otvoreni mail s prilozima
+  Nakon nacrta reci "ok, send it" / "pošalji": ARNOX šalje ono što piše u prozoru (i tvoje izmjene), pa zatvori prozor.
+  "cancel" odbacuje nacrt. Možeš i sam pritisnuti SEND u prozoru. Ništa se ne šalje dok ti to ne kažeš.
   U čitaču su dugmad Reply i Delete; u inboxu dugme "New mail".
   Više mailova, pretraga, prosljeđivanje i prilozi:
   "show more mails" / "next mails"       učitava sljedećih 25 (dugme "Show more" u inboxu radi isto)

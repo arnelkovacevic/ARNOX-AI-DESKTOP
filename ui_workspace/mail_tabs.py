@@ -683,7 +683,7 @@ class ComposeTab(QWidget):
         bar.addWidget(self._send)
         bar.addWidget(self._discard)
         bar.addWidget(self._status, stretch=1)
-        note = QLabel("A draft written by ARNOX is not sent until you press Send.")
+        note = QLabel("A draft is not sent until you press Send or tell ARNOX to send it.")
         note.setObjectName("mailNote")
         bar.addWidget(note)
         layout.addLayout(bar)
@@ -737,6 +737,9 @@ class ComposeTab(QWidget):
         if 0 <= index < len(self._attachments):
             del self._attachments[index]
             self._rebuild_chips()
+
+    def attachments(self) -> list[dict]:
+        return [dict(item) for item in self._attachments]
 
     def attachment_names(self) -> list[str]:
         return [str(item.get("filename", "")) for item in self._attachments]

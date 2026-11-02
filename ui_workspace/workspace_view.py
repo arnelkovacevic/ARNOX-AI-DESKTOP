@@ -227,6 +227,25 @@ class WorkspaceView(QWidget):
             return f"Closed {name}."
         return "Unknown tab action. Use list, close, close_all, or switch."
 
+    def compose_fields(self) -> dict | None:
+        """What the newest compose window currently says, including edits the user made."""
+        for index in range(self._tabs.count() - 1, -1, -1):
+            widget = self._tabs.widget(index)
+            if isinstance(widget, ComposeTab):
+                fields = widget.fields()
+                fields["attachments"] = widget.attachments()
+                return fields
+        return None
+
+    def close_compose(self) -> int:
+        """Close every compose window (after a send or a cancel by voice). Returns how many were closed."""
+        closed = 0
+        for index in range(self._tabs.count() - 1, -1, -1):
+            if isinstance(self._tabs.widget(index), ComposeTab):
+                self.close_tab(index)
+                closed += 1
+        return closed
+
     def _close_by_key(self, key: str) -> None:
         index = self._index_of(key)
         if index is not None:

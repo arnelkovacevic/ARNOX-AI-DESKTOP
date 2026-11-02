@@ -9543,6 +9543,14 @@ class JarvisUI:
         """Thread-safe access to secondary interface utilities."""
         self._win._ui_command_sig.emit(action)
 
+    def workspace_compose_fields(self):
+        """Current text of the open compose window, or None. Safe from any thread."""
+        return self._call_on_gui_thread(lambda: self._win._workspace.compose_fields())
+
+    def workspace_close_compose(self) -> int:
+        """Close the compose windows after a send or cancel. Safe from any thread."""
+        return self._call_on_gui_thread(lambda: self._win._workspace.close_compose())
+
     def workspace_manage_tabs(self, action: str, title: str = "") -> str:
         """List, close, close all, or switch workspace tabs by name. Safe from any thread."""
         return self._call_on_gui_thread(lambda: self._win.manage_workspace_tabs(action, title))
