@@ -36,7 +36,7 @@ export function AuthScreen({ onSession }: { onSession: (session: Session) => voi
   return (
     <main className="entry-shell">
       <section className="entry-identity" aria-labelledby="entry-title">
-        <div className="wordmark"><span className="wordmark-mark">J</span> ARNOX</div>
+        <div className="wordmark"><span className="wordmark-mark">A</span> ARNOX</div>
         <div className="entry-reactor" aria-hidden="true"><span /></div>
         <p className="eyebrow">Personal intelligence system</p>
         <h1 id="entry-title">Command without friction.</h1>

@@ -26,7 +26,7 @@ export function JarvisConsole({ user, onSignOut }: { user: User; onSignOut: () =
   return (
     <main className="console-shell">
       <header className="console-header">
-        <div className="wordmark"><span className="wordmark-mark">J</span> ARNOX CORE</div>
+        <div className="wordmark"><span className="wordmark-mark">A</span> ARNOX CORE</div>
         <div className="header-state" aria-live="polite">
           {connected ? <Wifi size={14} /> : <WifiOff size={14} />}
           <span>{live.state}</span>

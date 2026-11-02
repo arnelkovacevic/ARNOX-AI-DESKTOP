@@ -31,7 +31,7 @@ export function Onboarding({ user, onComplete, onSignOut }: { user: User; onComp
   return (
     <main className="onboarding-shell">
       <header className="onboarding-header">
-        <div className="wordmark"><span className="wordmark-mark">J</span> ARNOX</div>
+        <div className="wordmark"><span className="wordmark-mark">A</span> ARNOX</div>
         <button className="text-button" onClick={onSignOut}>Use another account</button>
       </header>
       <section className="onboarding-sequence">
