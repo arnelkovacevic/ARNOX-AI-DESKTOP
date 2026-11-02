@@ -145,8 +145,26 @@ class GmailAttachmentTests(unittest.TestCase):
         self.assertIn("report (1).pdf", second)
         self.assertNotIn("..", first)
 
-    def test_message_id_is_required(self):
-        self.assertIn("message ID", mail.email_control({"action": "attachment_read"}))
+    def test_message_id_is_required_when_nothing_was_read_yet(self):
+        with mock.patch.object(mail, "_LAST_READ_MESSAGE_ID", ""):
+            self.assertIn("message ID", mail.email_control({"action": "attachment_read"}))
+
+    def test_reading_an_email_lets_the_attachment_be_read_without_an_id(self):
+        self._message(_message(_part("contract.pdf", len(self.pdf), "id1")))
+        self._attachment_bytes(self.pdf)
+        with mock.patch.object(mail, "_LAST_READ_MESSAGE_ID", ""):
+            mail.email_control({"action": "read", "message_id": "m42"})
+            result = mail.email_control({"action": "attachment_read"})
+        self.assertIn("Contract value 9999 EUR", result)
+        self.service.users().messages().get.assert_any_call(userId="me", id="m42", format="full")
+
+    def test_model_sees_a_dedicated_attachment_tool_that_says_it_can_read_them(self):
+        import main
+
+        tool = next(d for d in main.TOOL_DECLARATIONS if d["name"] == "email_attachment")
+        self.assertIn("YOU CAN read attachments", tool["description"])
+        self.assertEqual(tool["parameters"]["properties"]["action"]["enum"], ["list", "read", "save"])
+        self.assertEqual(tool["parameters"]["required"], ["action"])
 
     def test_attachment_scope_needs_no_new_permission(self):
         self.assertIn("https://www.googleapis.com/auth/gmail.readonly", mail.GMAIL_SCOPES)

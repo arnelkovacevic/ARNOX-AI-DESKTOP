@@ -400,6 +400,8 @@ def _gmail_read(message_id: str, max_chars: int = 12000) -> str:
         body = _gmail_body(message.get("payload", {})) or str(message.get("snippet", ""))
         if len(body) > max_chars:
             body = body[:max_chars].rstrip() + "\n\n[Message truncated]"
+        global _LAST_READ_MESSAGE_ID
+        _LAST_READ_MESSAGE_ID = message_id
         attachments = _attachment_parts(message.get("payload", {}))
         attachment_note = (
             "\n\nAttachments (use action=attachment_read to read one):\n" + _format_attachment_list(attachments)
@@ -1350,6 +1352,9 @@ def _gmail_draft_delete(draft_id: str) -> str:
         return _gmail_api_error(exc, "draft deletion")
 
 
+# The message the user most recently had read, so "read the attachment" needs no message ID.
+_LAST_READ_MESSAGE_ID = ""
+
 MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024
 _BLOCKED_ATTACHMENT_EXTS = {
     "exe", "msi", "dmg", "pkg", "app", "scr", "com", "dll", "jar", "apk", "iso", "vbs", "lnk", "bat", "cmd", "ps1",
@@ -1523,8 +1528,9 @@ def _gmail_management(action: str, params: dict) -> str | None:
             return "A message ID from the inbox or search results is required."
         return _gmail_trash_message(message_id, restore=action == "untrash")
     if action in {"attachments", "attachment_read", "attachment_save"}:
+        message_id = message_id or _LAST_READ_MESSAGE_ID
         if not message_id:
-            return "A message ID from the inbox or search results is required."
+            return "Read or search an email first, or give a message ID from the inbox or search results."
         selector = str(params.get("attachment", "")).strip()
         if action == "attachments":
             return _gmail_attachments(message_id)
