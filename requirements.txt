@@ -24,7 +24,12 @@ psutil
 pyautogui
 pygetwindow
 pyperclip
-pyqt6
+# PyQt6 and WebEngine must share one Qt version. Mixing (for example PyQt6 6.12 with
+# WebEngine 6.11) produces binary incompatibilities, so all four are pinned together.
+PyQt6==6.11.0
+PyQt6-Qt6==6.11.0
+PyQt6-WebEngine==6.11.0
+PyQt6-WebEngine-Qt6==6.11.0
 python-docx
 openpyxl
 python-pptx
