@@ -54,9 +54,10 @@ class _NumericAwareProxy(QSortFilterProxyModel):
 
 
 class TableTab(QWidget):
-    def __init__(self, path: str, parent=None):
+    def __init__(self, path: str, parent=None, frame: pandas.DataFrame | None = None, title: str = ""):
         super().__init__(parent)
         self.path = path
+        self._title = title or Path(path).name
         self._tables: dict[str, pandas.DataFrame] = {}
         self._truncated = False
         self.error = ""
@@ -94,7 +95,7 @@ class TableTab(QWidget):
         self._view.setModel(self._proxy)
 
         try:
-            self._tables = load_tables(path)
+            self._tables = {title or "Data": frame} if frame is not None else load_tables(path)
         except TableLoadError as exc:
             self.error = str(exc)
             self._status.setText(self.error)
@@ -140,4 +141,4 @@ class TableTab(QWidget):
         self._status.setText(f"{shown:,} of {total:,} rows{suffix}")
 
     def title(self) -> str:
-        return Path(self.path).name
+        return self._title

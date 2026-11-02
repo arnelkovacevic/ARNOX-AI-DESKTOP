@@ -552,7 +552,8 @@ TOOL_DECLARATIONS = [
             "type": "OBJECT",
             "properties": {
                 "file_path": {"type": "STRING", "description": "Path or file name of the PDF, CSV, Excel, or HTML file. Empty uses the file the user dropped in."},
-                "url": {"type": "STRING", "description": "https address to show in the workspace, e.g. https://mail.google.com or https://www.youtube.com."}
+                "url": {"type": "STRING", "description": "https address to show in the workspace, e.g. https://www.youtube.com."},
+                "view": {"type": "STRING", "enum": ["inbox", "unread", "agenda"], "description": "Show Gmail inbox, unread mail, or the calendar agenda as a table in the workspace. Uses the connected Google account; no browser login."}
             },
             "required": []
         }
@@ -1687,9 +1688,15 @@ class JarvisLive:
                 result = r or f"Message sent to {args.get('receiver')}."
 
             elif name == "workspace_open":
-                raw_url = str(args.get("url") or "").strip()
                 raw_path = str(args.get("file_path") or "").strip() or str(getattr(self.ui, "current_file", "") or "")
-                if raw_url:
+                raw_view = str(args.get("view") or "").strip().lower()
+                raw_url = str(args.get("url") or "").strip()
+                if raw_view:
+                    if not callable(getattr(self.ui, "workspace_open_data", None)):
+                        result = "Mail and calendar tables are only shown in the desktop app's workspace."
+                    else:
+                        result = await asyncio.to_thread(lambda: self.ui.workspace_open_data(raw_view))
+                elif raw_url:
                     if not callable(getattr(self.ui, "workspace_open_web", None)):
                         result = "Web pages can only be shown in the desktop app's workspace."
                     else:

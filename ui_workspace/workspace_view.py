@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
     QGraphicsOpacityEffect, QHBoxLayout, QLabel, QPushButton, QTabBar, QTabWidget, QToolButton, QVBoxLayout, QWidget,
 )
 
-from core.workspace_router import Route, classify_file, route_web
+from core.workspace_router import Route, classify_file, route_data, route_web
 from ui_workspace import theme
 from ui_workspace.pdf_tab import PdfTab
 from ui_workspace.table_tab import TableTab
@@ -75,6 +75,9 @@ class WorkspaceView(QWidget):
         self._fade.start()
 
     # ----- opening and closing ---------------------------------------------------------------
+    def open_data(self, view: str) -> str:
+        return self.open_route(route_data(view))
+
     def open_web(self, address: str) -> str:
         """Show an https page (or http on localhost) in a web tab."""
         route = route_web(address)
@@ -101,6 +104,19 @@ class WorkspaceView(QWidget):
             return f"{route.title} is already open. Switched to it."
         if self._tabs.count() >= MAX_TABS:
             self.close_tab(0)
+        if route.kind == "data":
+            from ui_workspace.data_views import VIEWS
+
+            title, build = VIEWS[route.target]
+            try:
+                frame = build(25, 14)
+            except Exception as exc:
+                return f"Could not load {title}: {exc}"
+            widget = TableTab(f"data:{route.target}", frame=frame, title=title)
+            widget.setProperty("route_target", f"data:{route.target}")
+            index = self._tabs.addTab(widget, title)
+            self._tabs.setCurrentIndex(index)
+            return f"{title} shown in the workspace ({len(frame)} row(s))."
         if route.kind == "web":
             widget = WebTab(route.target, popup_handler=self._open_popup_tab)
         elif route.kind == "html":

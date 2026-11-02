@@ -116,6 +116,12 @@ Web u workspaceu (https stranice i HTML fajlovi):
   Samo https (i http na localhost) se otvara. file:, javascript: i drugi se odbijaju.
   Iskačući prozori se otvaraju kao novi tabovi u workspaceu, ne kao prozori.
 
+Mail i kalendar u workspaceu (preko povezanog Google naloga, bez prijave u pregledniku):
+  "show my inbox in the workspace"       tabela: pošiljalac, naslov, datum, nepročitano (samo metapodaci)
+  "show unread mail in the workspace"    samo nepročitani
+  "show my calendar in the workspace"    agenda sljedećih 14 dana: početak, naslov, lokacija
+  Tijela mailova se ne prikazuju u tabeli. Za tekst jednog maila: "read message <ID>".
+
 Tiha pretraga (bez prikaza, odgovor dobijaš glasom):
   "what is the weather in Sarajevo today"     traži u pozadini, workspace se NE otvara
   "sakrij workspace"                          samo sakriva, tabovi ostaju
