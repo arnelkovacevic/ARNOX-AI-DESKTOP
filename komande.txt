@@ -101,6 +101,15 @@ Dokumenti i prilozi:
   "save the attachment"                       snimi prilog u Downloads/ARNOX Attachments
   Izvršne datoteke (.exe, .dmg, ...) se nikad ne otvaraju. Skenirani PDF bez teksta se prijavi kao takav.
 
+Workspace (dokumenti unutar ARNOX prozora):
+  "show this PDF in ARNOX" / "open report.pdf on screen"     PDF u novom tabu (zum, pretraga, stranice)
+  "show the spreadsheet" / "open sales.xlsx in the workspace"  CSV/Excel kao tabela (pretraga, sortiranje, listovi)
+  "close the tab"                    zatvori trenutni tab (ili Ctrl+W dok je workspace otvoren)
+  "hide the workspace"               nazad na ARNOX jezgro (tabovi ostaju otvoreni)
+  "show the workspace"               vrati otvorene tabove
+  Dugme "BACK TO CORE" u workspaceu radi isto što i "hide the workspace".
+  Web stranice se još NE mogu prikazati unutar ARNOX-a. Spotify se ne može (nema Widevine DRM).
+
 Fajlovi i ekran:
   "open <putanja ili fajl>"        otvori fajl ili folder
   "what is on my screen"           analiza ekrana (jednom po zahtjevu)

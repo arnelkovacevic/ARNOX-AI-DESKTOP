@@ -24,6 +24,7 @@ from PyQt6.QtGui import (
     QFontDatabase, QIcon, QImage, QKeySequence, QLinearGradient, QPainter,
     QPainterPath, QPen, QPixmap, QRadialGradient, QShortcut,
 )
+from ui_workspace.workspace_view import WorkspaceView
 from PyQt6.QtWidgets import (
     QMessageBox,
     QApplication, QComboBox, QCheckBox, QFormLayout, QFrame, QGraphicsOpacityEffect,
@@ -6621,6 +6622,7 @@ class MainWindow(QMainWindow):
     _log_sig       = pyqtSignal(str)
     _fullscreen_locked = False            # class default: changeEvent can fire during construction
     _state_sig     = pyqtSignal(str)
+    _workspace_sig = pyqtSignal(object)   # {"fn": callable, "future": Future}, run on the GUI thread
     _status_sig    = pyqtSignal(str)     # "normal" | "waiting" | "standby"
     _activity_sig  = pyqtSignal(str, bool)  # (text, typed): user speech or typed text
     _voice_sig     = pyqtSignal(str)
@@ -6774,9 +6776,19 @@ class MainWindow(QMainWindow):
         middle_layout.addWidget(self._right_panel)
 
         # Replace static layout with QSplitter for draggable panels
+        # The centre holds two pages: the ARNOX core (page 0) and the embedded workspace (page 1).
+        self._workspace = WorkspaceView()
+        self._workspace.hide_requested.connect(self.hide_workspace)
+        self._workspace.emptied.connect(self.hide_workspace)
+        self._center_stack = QStackedWidget()
+        self._center_stack.addWidget(self._ai_core_wrap)
+        self._center_stack.addWidget(self._workspace)
+        self._center_stack.setCurrentWidget(self._ai_core_wrap)
+        self._workspace_sig.connect(self._run_workspace_command)
+
         self._splitter = QSplitter(Qt.Orientation.Horizontal)
         self._splitter.addWidget(self._left_panel)
-        self._splitter.addWidget(self._ai_core_wrap)
+        self._splitter.addWidget(self._center_stack)
         self._splitter.addWidget(self._right_panel)
         self._splitter.setStretchFactor(0, 0)
         self._splitter.setStretchFactor(1, 1)
@@ -6919,6 +6931,10 @@ class MainWindow(QMainWindow):
         sc_full.activated.connect(self._toggle_fullscreen)
         sc_unlock = QShortcut(QKeySequence("Ctrl+Alt+U"), self)
         sc_unlock.activated.connect(self.unlock_fullscreen)
+        sc_close_tab = QShortcut(QKeySequence("Ctrl+W"), self)
+        sc_close_tab.activated.connect(
+            lambda: self.close_workspace_tab() if self._center_stack.currentWidget() is self._workspace else None
+        )
         sc_min = QShortcut(QKeySequence(Qt.Key.Key_F6), self)
         sc_min.setContext(Qt.ShortcutContext.WidgetWithChildrenShortcut)
         sc_min.activated.connect(lambda: _minimize_or_restore(self))
@@ -7183,6 +7199,9 @@ class MainWindow(QMainWindow):
         """Apply a selected theme immediately across the visible interface."""
         from PyQt6.QtGui import QPalette
 
+        if hasattr(self, "_workspace"):
+            self._workspace.refresh_theme()
+
         palette = self.palette()
         palette.setColor(QPalette.ColorRole.Window, QColor(C.BG))
         palette.setColor(QPalette.ColorRole.WindowText, QColor(C.WHITE))
@@ -7282,6 +7301,9 @@ class MainWindow(QMainWindow):
             "compact_mode": self._toggle_compact_mode,
             "fullscreen": self._toggle_fullscreen,
             "lock_fullscreen": self.lock_fullscreen,
+            "show_workspace": self.show_workspace,
+            "hide_workspace": self.hide_workspace,
+            "close_tab": self.close_workspace_tab,
             "show_shortcuts": self._toggle_shortcuts_overlay,
         }
         handler = handlers.get(action)
@@ -7428,6 +7450,36 @@ class MainWindow(QMainWindow):
             ToastManager.show_toast(self.centralWidget(), message, toast_type)
         except Exception:
             pass
+
+    # ----- embedded workspace ------------------------------------------------------------------
+    def _run_workspace_command(self, command):
+        """Runs on the GUI thread. The caller waits on the future, so tools get a real result."""
+        future = command["future"]
+        try:
+            future.set_result(command["fn"]())
+        except Exception as exc:
+            future.set_exception(exc)
+
+    def show_workspace(self) -> str:
+        if self._workspace.tab_count() == 0:
+            return "The workspace has nothing open yet."
+        if self._center_stack.currentWidget() is not self._workspace:
+            self._center_stack.setCurrentWidget(self._workspace)
+            self._workspace.fade_in()
+        return "Workspace shown."
+
+    def hide_workspace(self) -> str:
+        self._center_stack.setCurrentWidget(self._ai_core_wrap)
+        return "Back to the ARNOX core."
+
+    def open_workspace_document(self, path: str) -> str:
+        message = self._workspace.open_document(path)
+        if self._workspace.tab_count():
+            self.show_workspace()
+        return message
+
+    def close_workspace_tab(self) -> str:
+        return self._workspace.close_current()
 
     def lock_fullscreen(self):
         """Keep ARNOX fullscreen and in front until the user unlocks it."""
@@ -9448,6 +9500,20 @@ class JarvisUI:
     def handle_ui_command(self, action: str):
         """Thread-safe access to secondary interface utilities."""
         self._win._ui_command_sig.emit(action)
+
+    def workspace_open_document(self, path: str) -> str:
+        """Show a PDF, CSV or Excel file in the embedded workspace. Safe to call from any thread."""
+        return self._call_on_gui_thread(lambda: self._win.open_workspace_document(path))
+
+    def _call_on_gui_thread(self, fn, timeout: float = 20.0):
+        from concurrent.futures import Future
+        from PyQt6.QtCore import QThread
+
+        if QThread.currentThread() is QApplication.instance().thread():
+            return fn()
+        future: Future = Future()
+        self._win._workspace_sig.emit({"fn": fn, "future": future})
+        return future.result(timeout=timeout)
 
     def toggle_compact_mode(self):
         """Toggle compact/mini mode."""

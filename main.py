@@ -541,6 +541,22 @@ TOOL_DECLARATIONS = [
         }
     },
     {
+        "name": "workspace_open",
+        "description": (
+            "Shows a PDF, CSV, or Excel (.xlsx/.xls) file INSIDE the ARNOX window in its own tab, with search, zoom, "
+            "sorting and sheets, without opening any external program. Use it when the user says show, display, or open "
+            "a document in ARNOX or on screen. Web pages cannot be shown in the workspace yet. "
+            "To close the tab use jarvis_ui_control action=close_tab, and to go back to the core use hide_workspace."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "file_path": {"type": "STRING", "description": "Path or file name of the PDF, CSV or Excel file. Empty uses the file the user dropped in."}
+            },
+            "required": []
+        }
+    },
+    {
         "name": "email_attachment",
         "description": (
             "Opens and reads the attachments of a Gmail message. YOU CAN read attachments: PDF, Word (.docx), "
@@ -880,7 +896,7 @@ TOOL_DECLARATIONS = [
             "properties": {
                 "action": {
                     "type": "STRING",
-                    "enum": ["open_command_center", "close_command_center", "change_theme", "change_graphics_quality", "open_settings", "compact_mode", "fullscreen", "lock_fullscreen", "show_shortcuts", "sleep"],
+                    "enum": ["open_command_center", "close_command_center", "change_theme", "change_graphics_quality", "open_settings", "compact_mode", "fullscreen", "lock_fullscreen", "show_shortcuts", "sleep", "show_workspace", "hide_workspace", "close_tab"],
                     "description": "The interface action to perform."
                 },
                 "theme": {
@@ -1659,6 +1675,18 @@ class JarvisLive:
                 r = await asyncio.to_thread(lambda: send_message(parameters=args, response=None, player=self.ui, session_memory=None))
                 result = r or f"Message sent to {args.get('receiver')}."
 
+            elif name == "workspace_open":
+                raw_path = str(args.get("file_path") or "").strip() or str(getattr(self.ui, "current_file", "") or "")
+                if not raw_path:
+                    result = "Tell me which PDF, CSV or Excel file to show."
+                elif not callable(getattr(self.ui, "workspace_open_document", None)):
+                    result = "The workspace is only available in the desktop app."
+                else:
+                    from actions.file_processor import _resolve_file_path
+
+                    resolved = _resolve_file_path(raw_path, self.ui)
+                    result = await asyncio.to_thread(lambda: self.ui.workspace_open_document(str(resolved)))
+
             elif name == "email_attachment":
                 mapped = {"list": "attachments", "read": "attachment_read", "save": "attachment_save"}
                 email_args = {
@@ -1840,7 +1868,7 @@ class JarvisLive:
     async def _execute_tool_batch(self, calls):
         """Run read-only calls concurrently while preserving mutation order."""
         mutating = {
-            "send_message", "prepare_message_reply", "email_control", "email_attachment", "calendar_control", "reminder",
+            "send_message", "prepare_message_reply", "email_control", "email_attachment", "calendar_control", "workspace_open", "reminder",
             "computer_settings", "computer_control", "desktop_control", "file_controller",
             "file_processor", "code_helper", "dev_agent", "game_updater",
             "create_presentation", "save_memory", "jarvis_ui_control", "graphics_quality",
