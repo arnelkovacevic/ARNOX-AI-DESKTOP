@@ -136,6 +136,16 @@ Mail i kalendar u workspaceu (preko povezanog Google naloga, bez prijave u pregl
   "write a mail to Alex saying ..."      otvara prozor za pisanje s popunjenim nacrtom. Ništa se ne šalje dok ti ne pritisneš SEND.
   "reply to this email saying ..."       otvara odgovor (isti thread) s tekstom i citatom, ti pritisneš SEND
   U čitaču su dugmad Reply i Delete; u inboxu dugme "New mail".
+  Više mailova, pretraga, prosljeđivanje i prilozi:
+  "show more mails" / "next mails"       učitava sljedećih 25 (dugme "Show more" u inboxu radi isto)
+  "find mails from Alex about invoice"   traži kroz CIJELO sanduče na Gmailu, ne samo među 25 učitanih
+                                         (u inboxu: kucanje filtrira učitano, Enter traži kroz cijelu mapu)
+  "forward this email to Bob"            prozor za prosljeđivanje s tekstom i prilozima; ti pritisneš SEND
+  "open the attachment" / "open the PDF" prilog se otvara u workspaceu (PDF, Excel, CSV, Word, PowerPoint, slike, tekst, HTML)
+  Klik na prilog u čitaču ga otvara. Fajl se privremeno preuzima i briše se kad zatvoriš tab.
+  "close the invoice tab" / "close all tabs" / "switch to the calendar" / "which tabs are open"
+  Svaki tab ima mali ✕ za zatvaranje.
+
   Ako je workspace sakriven: "send an email to Alex ..." pročita nacrt naglas i šalje tek nakon tvog "yes" (preko Gmail API-ja, bez prozora).
 
 Tiha pretraga (bez prikaza, odgovor dobijaš glasom):

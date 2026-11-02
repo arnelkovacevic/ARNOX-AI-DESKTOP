@@ -9,6 +9,12 @@ from urllib.parse import urlparse
 PDF_EXTS = {"pdf"}
 TABLE_EXTS = {"csv", "tsv", "xlsx", "xlsm", "xls"}
 HTML_EXTS = {"html", "htm"}
+IMAGE_EXTS = {"png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "tif", "tiff"}
+TEXT_EXTS = {
+    "txt", "md", "log", "json", "jsonl", "xml", "yaml", "yml", "ini", "cfg", "conf", "toml", "csv_notes", "eml",
+    "ics", "vcf", "py", "js", "ts", "css", "sql", "sh", "rtf", "srt", "tex",
+}
+DOC_EXTS = {"docx", "pptx"}   # shown as extracted text
 MAX_VIEW_BYTES = 200 * 1024 * 1024
 
 # Apps ARNOX can later show in the web tab. Playback with DRM (Spotify) does not work in the
@@ -22,7 +28,7 @@ APP_URLS = {
 
 @dataclass(frozen=True)
 class Route:
-    kind: str          # "pdf" | "table" | "html" | "web" | "unsupported"
+    kind: str          # "pdf" | "table" | "html" | "image" | "text" | "web" | "unsupported"
     target: str        # resolved file path or normalized URL
     title: str
     reason: str = ""   # why a route is unsupported
@@ -46,9 +52,13 @@ def classify_file(path: str | Path) -> Route:
         return Route("table", str(file.resolve()), file.name)
     if ext in HTML_EXTS:
         return Route("html", str(file.resolve()), file.name)
+    if ext in IMAGE_EXTS:
+        return Route("image", str(file.resolve()), file.name)
+    if ext in TEXT_EXTS or ext in DOC_EXTS:
+        return Route("text", str(file.resolve()), file.name)
     return Route(
         "unsupported", str(file), file.name,
-        f".{ext or 'unknown'} files cannot be shown in the workspace yet. Supported: PDF, CSV, TSV, Excel, HTML.",
+        f".{ext or 'unknown'} files cannot be shown in the workspace yet. Supported: PDF, CSV, TSV, Excel, HTML, images, text, Word, and PowerPoint.",
     )
 
 
@@ -76,14 +86,14 @@ def normalize_web_target(value: str) -> tuple[str | None, str]:
     return None, f"Only https addresses (or http on localhost) can be opened, not '{scheme or raw}'."
 
 
-DATA_VIEWS = ("inbox", "unread", "sent", "trash", "agenda", "message", "compose", "reply")
+DATA_VIEWS = ("inbox", "unread", "sent", "trash", "more", "search", "agenda", "message", "compose", "reply", "forward")
 
 
 def route_data(view: str) -> Route:
     """Route a Gmail or Calendar view to a table tab. Only known views are accepted."""
     key = str(view or "").strip().lower()
     if key not in DATA_VIEWS:
-        return Route("unsupported", key, key, f"Unknown view '{key}'. Use inbox, unread, sent, trash, agenda, message, compose, or reply.")
+        return Route("unsupported", key, key, f"Unknown view '{key}'. Use inbox, unread, sent, trash, more, search, agenda, message, compose, reply, or forward.")
     return Route("data", key, key)
 
 

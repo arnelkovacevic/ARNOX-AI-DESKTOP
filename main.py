@@ -553,8 +553,10 @@ TOOL_DECLARATIONS = [
             "properties": {
                 "file_path": {"type": "STRING", "description": "Path or file name of the PDF, CSV, Excel, or HTML file. Empty uses the file the user dropped in."},
                 "url": {"type": "STRING", "description": "https address to show in the workspace, e.g. https://www.youtube.com."},
-                "view": {"type": "STRING", "enum": ["inbox", "unread", "sent", "trash", "agenda", "message", "compose", "reply"], "description": "inbox, unread, sent, trash, agenda: Gmail or calendar lists in the workspace. message: open one email, laid out like a real mail. compose: open a new mail window with the draft filled in. reply: open a reply to the mail last read (or message_id) with the draft filled in. Nothing is sent until the user presses Send. Uses the connected Google account; no browser login."},
-                "to": {"type": "STRING", "description": "For view=compose: recipient address(es)."},
+                "view": {"type": "STRING", "enum": ["inbox", "unread", "sent", "trash", "more", "search", "agenda", "message", "compose", "reply", "forward"], "description": "inbox, unread, sent, trash, agenda: Gmail or calendar lists in the workspace. more: show the next 25 messages of the list just shown. search: search the WHOLE folder on Gmail (query, folder). forward: open a forward draft of the mail last read, with its attachments. message: open one email, laid out like a real mail. compose: open a new mail window with the draft filled in. reply: open a reply to the mail last read (or message_id) with the draft filled in. Nothing is sent until the user presses Send. Uses the connected Google account; no browser login."},
+                "query": {"type": "STRING", "description": "For view=search: what to find. Gmail search words work, e.g. from:alex invoice, has:attachment, after:2026/10/01."},
+                "folder": {"type": "STRING", "description": "For view=search: inbox (default), sent, trash, or all."},
+                "to": {"type": "STRING", "description": "For view=compose or forward: recipient address(es)."},
                 "cc": {"type": "STRING", "description": "For view=compose or reply: Cc address(es)."},
                 "body": {"type": "STRING", "description": "For view=compose or reply: the message text to put in the draft."},
                 "sender": {"type": "STRING", "description": "For view=message: show the newest email from this sender (name or address)."},
@@ -563,6 +565,22 @@ TOOL_DECLARATIONS = [
                 "message_id": {"type": "STRING", "description": "For view=message: an exact Gmail message ID."}
             },
             "required": []
+        }
+    },
+    {
+        "name": "workspace_tabs",
+        "description": (
+            "Manages the tabs open in the ARNOX workspace. close: close one tab by part of its name, or the current tab "
+            "when no title is given. close_all: close every tab. switch: bring a tab to the front. list: say which tabs are open. "
+            "Use it when the user says close the tab, close the invoice, close everything, or switch to the calendar."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "action": {"type": "STRING", "enum": ["list", "close", "close_all", "switch"], "description": "What to do."},
+                "title": {"type": "STRING", "description": "Part of the tab's name, e.g. 'invoice' or 'inbox'."}
+            },
+            "required": ["action"]
         }
     },
     {
@@ -578,7 +596,7 @@ TOOL_DECLARATIONS = [
         "parameters": {
             "type": "OBJECT",
             "properties": {
-                "action": {"type": "STRING", "enum": ["list", "read", "save"], "description": "list, read, or save."},
+                "action": {"type": "STRING", "enum": ["list", "read", "save", "open"], "description": "list, read (get the text), save, or open (show the file in the workspace)."},
                 "message_id": {"type": "STRING", "description": "Gmail message ID. Optional: defaults to the email read last."},
                 "attachment": {"type": "STRING", "description": "Attachment number or part of the file name. Optional when there is only one."}
             },
@@ -1705,7 +1723,7 @@ class JarvisLive:
                         from ui_workspace import data_views
 
                         options = {key: args.get(key) for key in (
-                            "sender", "subject", "number", "message_id", "days", "to", "cc", "body",
+                            "sender", "subject", "number", "message_id", "days", "to", "cc", "body", "query", "folder",
                         )}
                         try:
                             kind, payload, title, text = await asyncio.to_thread(lambda: data_views.fetch(raw_view, options))
@@ -1739,6 +1757,27 @@ class JarvisLive:
                             result = f"I could not find a file called '{raw_path}' on the Desktop, in Downloads, or in Documents."
                     if resolved is not None:
                         result = await asyncio.to_thread(lambda: self.ui.workspace_open_document(str(resolved)))
+
+            elif name == "workspace_tabs":
+                if not callable(getattr(self.ui, "workspace_manage_tabs", None)):
+                    result = "Tabs exist only in the desktop app's workspace."
+                else:
+                    result = await asyncio.to_thread(
+                        lambda: self.ui.workspace_manage_tabs(str(args.get("action", "")), str(args.get("title", "")))
+                    )
+
+            elif name == "email_attachment" and str(args.get("action", "")).lower() == "open":
+                # RULE 1: the attachment is shown in the workspace, never in an outside program.
+                if not callable(getattr(self.ui, "workspace_open_temp_document", None)):
+                    result = "Attachments can only be shown in the desktop app's workspace."
+                else:
+                    from actions import email_control as _mail
+
+                    def open_attachment():
+                        path, error = _mail.attachment_to_temp(str(args.get("message_id", "")), str(args.get("attachment", "")))
+                        return error or self.ui.workspace_open_temp_document(path)
+
+                    result = await asyncio.to_thread(open_attachment)
 
             elif name == "email_attachment":
                 mapped = {"list": "attachments", "read": "attachment_read", "save": "attachment_save"}
@@ -1921,7 +1960,7 @@ class JarvisLive:
     async def _execute_tool_batch(self, calls):
         """Run read-only calls concurrently while preserving mutation order."""
         mutating = {
-            "send_message", "prepare_message_reply", "email_control", "email_attachment", "calendar_control", "workspace_open", "reminder",
+            "send_message", "prepare_message_reply", "email_control", "email_attachment", "calendar_control", "workspace_open", "workspace_tabs", "reminder",
             "computer_settings", "computer_control", "desktop_control", "file_controller",
             "file_processor", "code_helper", "dev_agent", "game_updater",
             "create_presentation", "save_memory", "jarvis_ui_control", "graphics_quality",

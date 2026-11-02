@@ -35,7 +35,7 @@ class RouterTests(unittest.TestCase):
             self.assertEqual(router.classify_file(self._file(name)).kind, "table", name)
 
     def test_unsupported_and_missing_files_explain_themselves(self):
-        route = router.classify_file(self._file("notes.docx"))
+        route = router.classify_file(self._file("bundle.zip"))
         self.assertEqual(route.kind, "unsupported")
         self.assertIn("PDF, CSV", route.reason)
         self.assertIn("not found", router.classify_file(self.dir / "ghost.pdf").reason)
@@ -241,7 +241,7 @@ class WorkspaceViewTests(_QtCase):
         self.assertEqual(self.view.current_title(), "contract.pdf")
 
     def test_unsupported_file_is_explained_and_opens_nothing(self):
-        path = self.dir / "doc.docx"
+        path = self.dir / "bundle.zip"
         path.write_bytes(b"x")
         self.assertIn("cannot be shown", self.view.open_document(str(path)))
         self.assertEqual(self.view.tab_count(), 0)

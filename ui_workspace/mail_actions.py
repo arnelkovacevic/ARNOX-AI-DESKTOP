@@ -29,6 +29,7 @@ class MailActions(QObject):
         self._run("send", token, lambda: email_control.send_mail_now(
             payload.get("to", ""), payload.get("subject", ""), payload.get("body", ""), payload.get("cc", ""),
             payload.get("thread_id", ""), payload.get("in_reply_to", ""), payload.get("references", ""),
+            payload.get("attachments") or [],
         ))
 
     def _run(self, action: str, key: str, work: Callable[[], tuple[bool, str]]) -> None:

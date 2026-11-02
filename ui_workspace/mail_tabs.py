@@ -164,6 +164,8 @@ class _FilterProxy(QSortFilterProxyModel):
 class InboxTab(QWidget):
     open_requested = pyqtSignal(str)
     compose_requested = pyqtSignal()
+    more_requested = pyqtSignal(str, bool, str)   # query, include_trash, next page token
+    search_requested = pyqtSignal(str)            # text to search across the whole folder
 
     def __init__(self, frame: pandas.DataFrame, title: str = "Inbox", mode: str = "inbox", parent=None):
         super().__init__(parent)
@@ -174,8 +176,9 @@ class InboxTab(QWidget):
         layout.setSpacing(8)
         bar = QHBoxLayout()
         self._search = QLineEdit()
-        self._search.setPlaceholderText("Search sender or subject")
+        self._search.setPlaceholderText("Filter loaded mail as you type  ·  Enter searches the whole folder")
         self._search.setClearButtonEnabled(True)
+        self._search.returnPressed.connect(lambda: self._request_search())
         self._count = QLabel("")
         self._count.setObjectName("workspaceStatus")
         self._compose = QPushButton("✎  New mail")
@@ -186,21 +189,11 @@ class InboxTab(QWidget):
         layout.addLayout(bar)
 
         self._model = QStandardItemModel(self)
-        unread_total = 0
-        for _, row in frame.iterrows():
-            # In the Sent folder the interesting person is the recipient, not yourself.
-            name, _address = parse_sender(row.get("to", "") if mode == "sent" else row.get("from", ""))
-            item = QStandardItem()
-            item.setData(str(row.get("id", "")), ROLE_ID)
-            item.setData(name, ROLE_NAME)
-            item.setData(str(row.get("subject", "")), ROLE_SUBJECT)
-            item.setData(short_date(row.get("date", "")), ROLE_DATE)
-            unread = bool(str(row.get("unread", "")).strip())
-            unread_total += unread
-            item.setData(unread, ROLE_UNREAD)
-            item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
-            self._model.appendRow(item)
-        self._unread_total = unread_total
+        self._unread_total = 0
+        self._query = str(frame.attrs.get("query", ""))
+        self._include_trash = bool(frame.attrs.get("include_trash", False))
+        self._next_token = str(frame.attrs.get("next_token", ""))
+        self._append_rows(frame)
         self._proxy = _FilterProxy(self)
         self._proxy.setSourceModel(self._model)
         self._view = QListView()
@@ -216,8 +209,63 @@ class InboxTab(QWidget):
         self._empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._empty.setVisible(self._model.rowCount() == 0)
         layout.addWidget(self._empty)
+        footer = QHBoxLayout()
+        self._more = QPushButton("Show more")
+        self._more.clicked.connect(self._request_more)
+        self._more.setVisible(bool(self._next_token))
+        footer.addStretch(1)
+        footer.addWidget(self._more)
+        footer.addStretch(1)
+        layout.addLayout(footer)
         self._search.textChanged.connect(self._filter)
         self._filter("")
+
+    def _append_rows(self, frame: pandas.DataFrame) -> None:
+        for _, row in frame.iterrows():
+            # In the Sent folder the interesting person is the recipient, not yourself.
+            name, _address = parse_sender(row.get("to", "") if self.mode == "sent" else row.get("from", ""))
+            item = QStandardItem()
+            item.setData(str(row.get("id", "")), ROLE_ID)
+            item.setData(name, ROLE_NAME)
+            item.setData(str(row.get("subject", "")), ROLE_SUBJECT)
+            item.setData(short_date(row.get("date", "")), ROLE_DATE)
+            unread = bool(str(row.get("unread", "")).strip())
+            self._unread_total += unread
+            item.setData(unread, ROLE_UNREAD)
+            item.setFlags(Qt.ItemFlag.ItemIsEnabled | Qt.ItemFlag.ItemIsSelectable)
+            self._model.appendRow(item)
+
+    def append_frame(self, frame: pandas.DataFrame) -> None:
+        """Add the next page of messages to this list."""
+        self._append_rows(frame)
+        self._next_token = str(frame.attrs.get("next_token", ""))
+        self._more.setVisible(bool(self._next_token))
+        self._more.setEnabled(True)
+        self._more.setText("Show more")
+        self._empty.setVisible(self._model.rowCount() == 0)
+        self._filter(self._search.text())
+
+    def more_failed(self, text: str) -> None:
+        self._more.setEnabled(True)
+        self._more.setText("Show more")
+        self._count.setText(text)
+
+    def has_more(self) -> bool:
+        return bool(self._next_token)
+
+    def next_token(self) -> str:
+        return self._next_token
+
+    def _request_more(self) -> None:
+        if self._next_token:
+            self._more.setEnabled(False)
+            self._more.setText("Loading…")
+            self.more_requested.emit(self._query, self._include_trash, self._next_token)
+
+    def _request_search(self) -> None:
+        text = self._search.text().strip()
+        if text:
+            self.search_requested.emit(text)
 
     def total_rows(self) -> int:
         return self._model.rowCount()
@@ -427,6 +475,8 @@ class MessageTab(QWidget):
     """A message laid out like a real email: header card, then the body, then attachments."""
 
     reply_requested = pyqtSignal(dict)
+    forward_requested = pyqtSignal(dict)
+    attachment_requested = pyqtSignal(dict)
     trash_requested = pyqtSignal(str)
     restore_requested = pyqtSignal(str)
 
@@ -482,6 +532,8 @@ class MessageTab(QWidget):
         actions.setSpacing(8)
         self._reply = QPushButton("↩  Reply")
         self._reply.clicked.connect(lambda: self.reply_requested.emit(self.message))
+        self._forward = QPushButton("➦  Forward")
+        self._forward.clicked.connect(lambda: self.forward_requested.emit(self.message))
         self._trash = QPushButton("🗑  Delete")
         self._trash.clicked.connect(lambda: self._start("trash"))
         self._restore = QPushButton("↺  Restore to inbox")
@@ -491,7 +543,7 @@ class MessageTab(QWidget):
         self._restore.setVisible(trashed)
         self._status = QLabel("")
         self._status.setObjectName("workspaceStatus")
-        for widget in (self._reply, self._trash, self._restore):
+        for widget in (self._reply, self._forward, self._trash, self._restore):
             actions.addWidget(widget)
         actions.addWidget(self._status, stretch=1)
         card_layout.addLayout(actions)
@@ -535,14 +587,18 @@ class MessageTab(QWidget):
         if attachments:
             chips = QHBoxLayout()
             chips.setSpacing(8)
-            heading = QLabel("ATTACHMENTS")
+            heading = QLabel("ATTACHMENTS  ·  click to open")
             heading.setObjectName("mailKey")
             chips.addWidget(heading)
-            for item in attachments[:6]:
+            self._chips: list[QPushButton] = []
+            for item in attachments[:8]:
                 size = human_size(int(item.get("size", 0) or 0))
-                chip = QLabel(f"📎  {item.get('filename', 'file')}" + (f"   ·   {size}" if size else ""))
+                chip = QPushButton(f"📎  {item.get('filename', 'file')}" + (f"   ·   {size}" if size else ""))
                 chip.setObjectName("mailChip")
+                chip.setCursor(Qt.CursorShape.PointingHandCursor)
+                chip.clicked.connect(lambda _checked=False, data=item: self.attachment_requested.emit(data))
                 chips.addWidget(chip)
+                self._chips.append(chip)
             chips.addStretch(1)
             layout.addLayout(chips)
 
@@ -554,16 +610,19 @@ class MessageTab(QWidget):
         return self._body.toPlainText()
 
     def _start(self, action: str) -> None:
-        for button in (self._reply, self._trash, self._restore):
+        for button in (self._reply, self._forward, self._trash, self._restore):
             button.setEnabled(False)
         self._status.setText("Working…")
         (self.trash_requested if action == "trash" else self.restore_requested).emit(self.message_id)
+
+    def attachment_buttons(self) -> list:
+        return list(getattr(self, "_chips", []))
 
     def mail_result(self, ok: bool, text: str) -> None:
         """Called by the workspace when the background action finished."""
         self._status.setText(text)
         if not ok:
-            for button in (self._reply, self._trash, self._restore):
+            for button in (self._reply, self._forward, self._trash, self._restore):
                 button.setEnabled(True)
 
     def title(self) -> str:
@@ -609,6 +668,12 @@ class ComposeTab(QWidget):
         self._body.setPlaceholderText("Write your message")
         layout.addWidget(self._body, stretch=1)
 
+        self._attachments: list[dict] = [dict(item) for item in payload.get("attachments") or []]
+        self._chip_row = QHBoxLayout()
+        self._chip_row.setSpacing(8)
+        layout.addLayout(self._chip_row)
+        self._rebuild_chips()
+
         bar = QHBoxLayout()
         self._send = QPushButton("➤  Send")
         self._send.setObjectName("sendButton")
@@ -643,10 +708,38 @@ class ComposeTab(QWidget):
         payload.update({
             "to": recipients, "cc": self._cc.text().strip(),
             "subject": self._subject.text().strip(), "body": self._body.toPlainText(),
+            "attachments": [dict(item) for item in self._attachments],
         })
         self._send.setEnabled(False)
         self._status.setText("Sending…")
         self.send_requested.emit(payload)
+
+    def _rebuild_chips(self) -> None:
+        while self._chip_row.count():
+            item = self._chip_row.takeAt(0)
+            if item.widget() is not None:
+                item.widget().deleteLater()
+        if not self._attachments:
+            return
+        heading = QLabel("ATTACHED  ·  click a file to remove it")
+        heading.setObjectName("mailKey")
+        self._chip_row.addWidget(heading)
+        for index, item in enumerate(self._attachments):
+            size = human_size(int(item.get("size", 0) or 0))
+            chip = QPushButton(f"📎  {item.get('filename', 'file')}" + (f"   ·   {size}" if size else "") + "   ✕")
+            chip.setObjectName("mailChip")
+            chip.setCursor(Qt.CursorShape.PointingHandCursor)
+            chip.clicked.connect(lambda _checked=False, i=index: self.remove_attachment(i))
+            self._chip_row.addWidget(chip)
+        self._chip_row.addStretch(1)
+
+    def remove_attachment(self, index: int) -> None:
+        if 0 <= index < len(self._attachments):
+            del self._attachments[index]
+            self._rebuild_chips()
+
+    def attachment_names(self) -> list[str]:
+        return [str(item.get("filename", "")) for item in self._attachments]
 
     def mail_result(self, ok: bool, text: str) -> None:
         self._status.setText(text)

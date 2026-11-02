@@ -80,7 +80,7 @@ class WorkspaceIntegrationTests(unittest.TestCase):
         self.assertIs(self.window._center_stack.currentWidget(), self.window._workspace)
 
     def test_unsupported_file_keeps_the_core_visible(self):
-        text = Path(self.temp_dir.name) / "note.docx"
+        text = Path(self.temp_dir.name) / "bundle.zip"
         text.write_bytes(b"x")
         self.assertIn("cannot be shown", self.window.open_workspace_document(str(text)))
         self.assertTrue(self._on_core())

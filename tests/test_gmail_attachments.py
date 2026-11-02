@@ -163,7 +163,7 @@ class GmailAttachmentTests(unittest.TestCase):
 
         tool = next(d for d in main.TOOL_DECLARATIONS if d["name"] == "email_attachment")
         self.assertIn("YOU CAN read attachments", tool["description"])
-        self.assertEqual(tool["parameters"]["properties"]["action"]["enum"], ["list", "read", "save"])
+        self.assertEqual(tool["parameters"]["properties"]["action"]["enum"], ["list", "read", "save", "open"])
         self.assertEqual(tool["parameters"]["required"], ["action"])
 
     def test_attachment_scope_needs_no_new_permission(self):

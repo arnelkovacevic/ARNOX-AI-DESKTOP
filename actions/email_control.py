@@ -434,6 +434,11 @@ def _gmail_send_core(draft: dict[str, str]) -> tuple[bool, str]:
             message["In-Reply-To"] = draft["in_reply_to"]
             message["References"] = (draft.get("references", "") + " " + draft["in_reply_to"]).strip()
         message.set_content(draft["body"])
+        for item in draft.get("attachments") or []:
+            mime = str(item.get("mime") or "application/octet-stream")
+            maintype, _, subtype = mime.partition("/")
+            message.add_attachment(item["data"], maintype=maintype or "application",
+                                   subtype=subtype or "octet-stream", filename=item["filename"])
         body = {"raw": base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")}
         if draft.get("thread_id"):
             body["threadId"] = draft["thread_id"]
@@ -455,8 +460,40 @@ def _send_gmail(draft: dict[str, str]) -> str:
     return message + " The pending draft is still available." if "confirm" in message else message
 
 
+def fetch_attachment_bytes(message_id: str, attachment_id: str, inline_data: str = "") -> bytes:
+    """Download one attachment's bytes from Gmail (or decode the inline copy)."""
+    if inline_data:
+        data = inline_data
+    else:
+        service = _gmail_service()
+        data = service.users().messages().attachments().get(
+            userId="me", messageId=message_id, id=attachment_id
+        ).execute().get("data", "")
+    raw = base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))
+    if len(raw) > MAX_ATTACHMENT_BYTES:
+        raise ValueError(f"An attachment is larger than the {MAX_ATTACHMENT_BYTES // (1024 * 1024)} MB limit.")
+    return raw
+
+
+def _collect_forwarded(attachments: list[dict]) -> list[dict]:
+    """Download the attachments being forwarded. Executables are refused, like everywhere else."""
+    collected = []
+    total = 0
+    for item in attachments or []:
+        name = _safe_filename(item.get("filename", "attachment"))
+        if Path(name).suffix.lower().lstrip(".") in _BLOCKED_ATTACHMENT_EXTS:
+            raise ValueError(f"{name} is an executable or installer type and will not be forwarded.")
+        data = fetch_attachment_bytes(str(item.get("message_id", "")), str(item.get("attachment_id", "")),
+                                      str(item.get("inline_data", "")))
+        total += len(data)
+        if total > MAX_ATTACHMENT_BYTES:
+            raise ValueError("The attachments together are over the 25 MB limit.")
+        collected.append({"filename": name, "mime": item.get("mime", "application/octet-stream"), "data": data})
+    return collected
+
+
 def send_mail_now(to: str, subject: str, body: str, cc: str = "", thread_id: str = "",
-                  in_reply_to: str = "", references: str = "") -> tuple[bool, str]:
+                  in_reply_to: str = "", references: str = "", attachments: list | None = None) -> tuple[bool, str]:
     """Send from the workspace compose window. The user pressing Send is the explicit approval."""
     recipients = _normalize_recipients(to)
     if not recipients:
@@ -465,9 +502,13 @@ def send_mail_now(to: str, subject: str, body: str, cc: str = "", thread_id: str
     if not body:
         return False, "The message is empty."
     subject = re.sub(r"[\r\n]+", " ", str(subject or "")).strip() or "(No subject)"
+    try:
+        files = _collect_forwarded(attachments or [])
+    except Exception as exc:
+        return False, f"Could not attach the files: {exc}"
     return _gmail_send_core({
         "to": recipients, "cc": _normalize_recipients(cc), "subject": subject, "body": body,
-        "thread_id": thread_id, "in_reply_to": in_reply_to, "references": references,
+        "thread_id": thread_id, "in_reply_to": in_reply_to, "references": references, "attachments": files,
     })
 
 
@@ -480,7 +521,9 @@ def set_trash(message_id: str, trash: bool) -> tuple[bool, str]:
             messages.trash(userId="me", id=message_id).execute()
             return True, "Moved to the trash. You can restore it."
         messages.untrash(userId="me", id=message_id).execute()
-        return True, "Restored from the trash."
+        # Gmail's untrash only removes the TRASH label; the mail would otherwise sit in "All Mail".
+        messages.modify(userId="me", id=message_id, body={"addLabelIds": ["INBOX"], "removeLabelIds": []}).execute()
+        return True, "Restored to your inbox."
     except GmailConnectionError as exc:
         return False, str(exc)
     except Exception as exc:
@@ -1488,6 +1531,26 @@ def _fetch_attachment(message_id: str, selector: str) -> tuple[str, bytes] | str
     if len(raw) > MAX_ATTACHMENT_BYTES:
         return f"{filename} is larger than the {MAX_ATTACHMENT_BYTES // (1024 * 1024)} MB limit."
     return filename, raw
+
+
+def attachment_to_temp(message_id: str, selector: str) -> tuple[str, str]:
+    """Download one attachment into a private temp folder. Returns (path, '') or ('', readable error)."""
+    message_id = message_id or _LAST_READ_MESSAGE_ID
+    if not message_id:
+        return "", "Read or open an email first, or give a message ID."
+    try:
+        fetched = _fetch_attachment(message_id, selector)
+    except GmailConnectionError as exc:
+        return "", str(exc)
+    except Exception as exc:
+        return "", _gmail_api_error(exc, "attachment opening")
+    if isinstance(fetched, str):
+        return "", fetched
+    filename, raw = fetched
+    folder = Path(tempfile.mkdtemp(prefix="arnox-attachment-"))
+    target = folder / filename
+    target.write_bytes(raw)
+    return str(target), ""
 
 
 def _gmail_attachments(message_id: str) -> str:

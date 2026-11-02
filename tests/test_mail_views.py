@@ -176,8 +176,9 @@ class MessageTabTests(_Qt):
     def test_attachments_are_listed_with_sizes(self):
         tab = MessageTab(self._message(attachments=[{"filename": "invoice.pdf", "mime": "application/pdf", "size": 2048}]))
         texts = [label.text() for label in tab.findChildren(mail_tabs.QLabel)]
-        self.assertTrue(any("invoice.pdf" in text and "2 KB" in text for text in texts))
-        self.assertIn("ATTACHMENTS", texts)
+        chips = [button.text() for button in tab.attachment_buttons()]
+        self.assertTrue(any("invoice.pdf" in text and "2 KB" in text for text in chips))
+        self.assertTrue(any(text.startswith("ATTACHMENTS") for text in texts))
 
     def test_empty_body_has_a_placeholder(self):
         self.assertIn("no text", MessageTab(self._message(body="  ")).body_text())

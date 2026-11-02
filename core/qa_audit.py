@@ -11,7 +11,7 @@ from core.qa_report import Finding
 
 EXPECTED_TOOLS = {
     "open_app", "web_search", "weather_report", "check_messages",
-    "prepare_message_reply", "send_message", "email_control", "email_attachment", "calendar_control", "workspace_open", "reminder", "youtube_video", "media_control",
+    "prepare_message_reply", "send_message", "email_control", "email_attachment", "calendar_control", "workspace_open", "workspace_tabs", "reminder", "youtube_video", "media_control",
     "screen_process", "computer_settings", "browser_control", "file_controller",
     "desktop_control", "code_helper", "dev_agent", "agent_task",
     "computer_control", "game_updater", "flight_finder", "jarvis_ui_control",

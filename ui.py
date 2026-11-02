@@ -7479,6 +7479,16 @@ class MainWindow(QMainWindow):
             self.show_workspace()
         return message
 
+    def manage_workspace_tabs(self, action: str, title: str = "") -> str:
+        message = self._workspace.manage_tabs(action, title)
+        return message
+
+    def open_workspace_temp(self, path: str) -> str:
+        message = self._workspace.open_temp_document(path)
+        if self._workspace.tab_count():
+            self.show_workspace()
+        return message
+
     def open_workspace_view(self, kind: str, payload, title: str) -> str:
         """Show data that a worker thread already loaded (inbox, agenda, or one message)."""
         message = self._workspace.show_data(kind, payload, title)
@@ -9532,6 +9542,14 @@ class JarvisUI:
     def handle_ui_command(self, action: str):
         """Thread-safe access to secondary interface utilities."""
         self._win._ui_command_sig.emit(action)
+
+    def workspace_manage_tabs(self, action: str, title: str = "") -> str:
+        """List, close, close all, or switch workspace tabs by name. Safe from any thread."""
+        return self._call_on_gui_thread(lambda: self._win.manage_workspace_tabs(action, title))
+
+    def workspace_open_temp_document(self, path: str) -> str:
+        """Show a downloaded attachment in the workspace; its temp folder is removed when the tab closes."""
+        return self._call_on_gui_thread(lambda: self._win.open_workspace_temp(path))
 
     def workspace_show_data(self, kind: str, payload, title: str) -> str:
         """Show an inbox, agenda, or message that was loaded in the caller's thread. Safe from any thread."""
