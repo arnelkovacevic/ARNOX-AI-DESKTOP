@@ -59,13 +59,11 @@ def _get_api_key() -> str:
 
 
 def _open_url(url: str) -> None:
+    # RULE 1: videos open in the ARNOX workspace, not in the system browser.
     try:
-        if is_mac():
-            subprocess.Popen(["open", url])
-        elif is_linux():
-            subprocess.Popen(["xdg-open", url])
-        else:
-            subprocess.Popen(["cmd", "/c", "start", "", url], shell=False)
+        from core.url_opener import open_url
+
+        open_url(url)
     except Exception as e:
         print(f"[YouTube] ⚠️ open_url failed: {e}")
 

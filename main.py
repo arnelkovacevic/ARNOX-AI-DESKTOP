@@ -403,9 +403,9 @@ TOOL_DECLARATIONS = [
     {
         "name": "open_app",
         "description": (
-            "Opens any application on the computer. "
-            "Use this whenever the user asks to open, launch, or start any app, "
-            "website, or program. Always call this tool — never just say you opened it."
+            "Opens a NATIVE application on the computer (Calculator, Notes, Terminal, a game). "
+            "Do NOT use it for websites, web apps, or browsers (Instagram, Facebook, YouTube, Gmail, Chrome): "
+            "those are shown inside ARNOX with workspace_open (url). Always call a tool — never just say you opened it."
         ),
         "parameters": {
             "type": "OBJECT",
@@ -647,7 +647,7 @@ TOOL_DECLARATIONS = [
         "name": "youtube_video",
         "description": (
             "Controls YouTube. Use for: playing videos, summarizing a video's content, "
-            "getting video info, or showing trending videos."
+            "getting video info, or showing trending videos. Videos open inside the ARNOX workspace."
         ),
         "parameters": {
             "type": "OBJECT",
@@ -728,8 +728,9 @@ TOOL_DECLARATIONS = [
     {
         "name": "browser_control",
         "description": (
-            "Controls any web browser. Use for: opening websites, searching the web, "
-            "clicking elements, filling forms, scrolling, screenshots, navigation, any web-based task. "
+            "Automates a separate web browser: clicking elements, filling forms, scrolling, reading page text. "
+            "It does NOT show pages to the user: to open or show a website use workspace_open with url. "
+            "go_to, new_tab and search are shown inside the ARNOX workspace automatically. "
             "Always pass the 'browser' parameter when the user specifies a browser (e.g. 'open in Edge', "
             "'use Firefox', 'open Chrome'). Multiple browsers can run simultaneously."
         ),
@@ -1275,6 +1276,11 @@ class JarvisLive:
         # already inspect JarvisLive.ui. The engine contract is JarvisClient.
         self.client         = client
         self.ui             = client
+        # RULE 1: web addresses opened by any action go to the workspace when the app has one.
+        if callable(getattr(client, "workspace_open_web", None)):
+            from core.url_opener import set_in_app_opener
+
+            set_in_app_opener(client.workspace_open_web)
         self.cloud_safe     = bool(cloud_safe)
         self.external_audio = bool(external_audio)
         self._api_key       = api_key.strip() if isinstance(api_key, str) else None
@@ -1666,16 +1672,43 @@ class JarvisLive:
 
         try:
             if name == "open_app":
-                r = await asyncio.to_thread(lambda: open_app(parameters=args, response=None, player=self.ui))
-                result = r or f"Opened {args.get('app_name')}."
+                from core import workspace_router as _router
+
+                target = str(args.get("app_name") or "").strip()
+                lowered = target.lower()
+                has_web = callable(getattr(self.ui, "workspace_open_web", None))
+                web_url = _router.web_app_url(target) if has_web else None
+                if has_web and lowered in _router.MAIL_WORDS:
+                    result = await self._show_view("inbox")
+                elif has_web and lowered in _router.CALENDAR_WORDS:
+                    result = await self._show_view("agenda")
+                elif has_web and web_url:
+                    result = await asyncio.to_thread(lambda: self.ui.workspace_open_web(web_url))
+                elif has_web and lowered in _router.BROWSER_NAMES:
+                    result = ("I show websites inside ARNOX instead of opening a browser. "
+                              "Tell me which site or address to open.")
+                else:
+                    r = await asyncio.to_thread(lambda: open_app(parameters=args, response=None, player=self.ui))
+                    result = r or f"Opened {args.get('app_name')}."
 
             elif name == "weather_report":
                 r = await asyncio.to_thread(lambda: weather_action(parameters=args, player=self.ui))
                 result = r or "Weather delivered."
 
             elif name == "browser_control":
-                r = await asyncio.to_thread(lambda: browser_control(parameters=args, player=self.ui))
-                result = r or "Done."
+                from core import workspace_router as _router
+
+                browser_action = str(args.get("action", "")).lower()
+                if callable(getattr(self.ui, "workspace_open_web", None)) and browser_action in {"go_to", "new_tab", "search"}:
+                    # RULE 1: showing a page or a search happens in the workspace, never in an outside browser.
+                    address = (
+                        _router.search_url(args.get("query", "")) if browser_action == "search"
+                        else (_router.web_app_url(str(args.get("url", ""))) or str(args.get("url", "")))
+                    )
+                    result = await asyncio.to_thread(lambda: self.ui.workspace_open_web(address))
+                else:
+                    r = await asyncio.to_thread(lambda: browser_control(parameters=args, player=self.ui))
+                    result = r or "Done."
 
             elif name == "file_controller":
                 if (
@@ -1977,6 +2010,17 @@ class JarvisLive:
             id=fc.id, name=name,
             response={"result": result}
         )
+
+    async def _show_view(self, view: str) -> str:
+        """Show the inbox or the calendar in the workspace (used when someone asks to 'open Gmail')."""
+        from ui_workspace import data_views
+
+        try:
+            kind, payload, title, text = await asyncio.to_thread(lambda: data_views.fetch(view, {}))
+            await asyncio.to_thread(lambda: self.ui.workspace_show_data(kind, payload, title))
+            return text
+        except Exception as exc:
+            return f"Could not show that: {exc}"
 
     async def _execute_tool_batch(self, calls):
         """Run read-only calls concurrently while preserving mutation order."""

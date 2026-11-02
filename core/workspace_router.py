@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlparse
@@ -23,7 +24,51 @@ APP_URLS = {
     "youtube": "https://www.youtube.com",
     "google": "https://www.google.com",
     "maps": "https://maps.google.com",
+    "google maps": "https://maps.google.com",
+    "instagram": "https://www.instagram.com",
+    "facebook": "https://www.facebook.com",
+    "twitter": "https://x.com",
+    "x": "https://x.com",
+    "tiktok": "https://www.tiktok.com",
+    "linkedin": "https://www.linkedin.com",
+    "reddit": "https://www.reddit.com",
+    "github": "https://github.com",
+    "whatsapp web": "https://web.whatsapp.com",
+    "wikipedia": "https://www.wikipedia.org",
+    "duckduckgo": "https://duckduckgo.com",
 }
+
+# Words that mean "the mail or calendar the user has connected": shown as ARNOX views, not websites.
+MAIL_WORDS = {"gmail", "mail", "email", "e-mail", "inbox", "google mail"}
+CALENDAR_WORDS = {"calendar", "google calendar", "agenda"}
+BROWSER_NAMES = {"chrome", "google chrome", "safari", "firefox", "edge", "microsoft edge", "brave", "opera", "vivaldi", "browser", "internet"}
+
+# "report.pdf" looks like a domain, but it is a file name, so these endings never count as a website.
+_FILE_SUFFIXES = {
+    "pdf", "docx", "doc", "xlsx", "xls", "csv", "txt", "md", "json", "png", "jpg", "jpeg", "gif", "zip", "exe",
+    "py", "js", "html", "htm", "pptx", "mp3", "mp4", "app", "dmg",
+}
+
+_DOMAIN = re.compile(r"^(?:https?://)?[\w-]+(?:\.[\w-]+)+(?:[/?#]\S*)?$", re.IGNORECASE)
+
+
+def web_app_url(name: str) -> str | None:
+    """Address for a site or web app the user named ("instagram", "facebook.com"), or None."""
+    text = str(name or "").strip().strip("\"'")
+    if not text:
+        return None
+    alias = APP_URLS.get(text.lower())
+    if alias:
+        return alias
+    if _DOMAIN.match(text) and text.rsplit(".", 1)[-1].lower().split("/")[0] not in _FILE_SUFFIXES:
+        return normalize_web_target(text)[0]
+    return None
+
+
+def search_url(query: str) -> str:
+    from urllib.parse import quote_plus
+
+    return f"https://duckduckgo.com/?q={quote_plus(str(query or '').strip())}"
 
 
 @dataclass(frozen=True)
