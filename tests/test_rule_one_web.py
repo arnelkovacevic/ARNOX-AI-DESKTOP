@@ -176,3 +176,22 @@ class DescriptionTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WorkspaceOpenUrlPrecedenceTests(unittest.TestCase):
+    """A model may send both url and view; an explicit address must win."""
+
+    def test_url_with_view_search_opens_the_site_not_an_empty_search(self):
+        import asyncio
+        from types import SimpleNamespace as NS
+
+        opened = []
+        live = main.JarvisLive.__new__(main.JarvisLive)
+        live.ui = NS(muted=True, current_file=None, set_state=lambda *_: None, write_log=lambda *_: None,
+                     workspace_open_web=lambda url: opened.append(url) or "Opened.",
+                     workspace_show_data=lambda *a: (_ for _ in ()).throw(AssertionError("no data view")))
+        live.cloud_safe = False
+        call = NS(name="workspace_open", args={"url": "https://www.instagram.com", "view": "search"}, id="1")
+        result = asyncio.run(live._execute_tool(call)).response["result"]
+        self.assertEqual(opened, ["https://www.instagram.com"])
+        self.assertEqual(result, "Opened.")

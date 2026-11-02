@@ -1752,7 +1752,7 @@ class JarvisLive:
                 raw_path = str(args.get("file_path") or "").strip() or str(getattr(self.ui, "current_file", "") or "")
                 raw_view = str(args.get("view") or "").strip().lower()
                 raw_url = str(args.get("url") or "").strip()
-                if raw_view:
+                if raw_view and not raw_url:
                     if not callable(getattr(self.ui, "workspace_show_data", None)):
                         result = "Mail and calendar views are only shown in the desktop app's workspace."
                     else:
