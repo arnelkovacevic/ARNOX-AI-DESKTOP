@@ -102,7 +102,7 @@ STARTUP_CLAPS_REQUIRED = 2
 STARTUP_CLAP_MAX_GAP_SECONDS = 4.0
 STARTUP_CLAP_COOLDOWN_SECONDS = 0.22
 SELF_QUIT_GOODBYE = (
-    "Certainly, sir. It has been a privilege. ARNOX is going offline now. "
+    "Certainly. It has been a privilege. ARNOX is going offline now. "
     "Until next time."
 )
 

@@ -170,8 +170,8 @@ class DescriptionTests(unittest.TestCase):
 
     def test_prompt_routes_websites_to_the_workspace(self):
         prompt = open(os.path.join(os.path.dirname(main.__file__), "core", "prompt.txt"), encoding="utf-8").read()
-        self.assertIn("WEBSITES AND BROWSERS", prompt)
-        self.assertIn("NEVER call open_app or browser_control just to show a website", prompt)
+        self.assertIn("Show inside ARNOX", prompt)
+        self.assertIn("Any site or address (instagram, facebook.com, youtube, a URL): workspace_open with url", prompt)
 
 
 if __name__ == "__main__":
