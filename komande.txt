@@ -171,3 +171,10 @@ Napomene:
       npm start          (http://localhost:3000)
   - Zaustavljanje: Ctrl+C u oba terminala.
   - Ako alembic javi grešku o putanji ./tmp, napravi folder: mkdir -p tmp
+
+  Ako alembic upgrade head javi "table users already exists":
+    baza je već napravljena (API je sam kreirao tabele u razvoju). Samo označi verziju:
+      alembic stamp head
+      alembic upgrade head
+    Ako nemaš podataka koje želiš sačuvati, možeš i obrisati bazu i ponovo pokrenuti:
+      rm tmp/jarvis_web.db && alembic upgrade head
