@@ -1,199 +1,154 @@
-ARNOX CORE - KOMANDE
-====================
+ARNOX - KOMANDE (kratki spisak)
+================================
 
-1. POKRETANJE U TERMINALU
--------------------------
+Govori prirodno. Ovo su izrazi koji najpouzdanije rade. ARNOX razumije i slobodnije formulacije.
 
-Otvori Terminal, pa:
-
-  cd /Users/arnel/Desktop/JARVIS-DESKTOP/JARVIS-OS-V.2
+POKRETANJE (desktop)
+--------------------
+  cd "/Users/arnel/Desktop/JARVIS-DESKTOP/JARVIS-OS-V.2"
   source .venv/bin/activate
   JARVIS_CLI=1 python main.py
 
-Ili kraće, sa aktiviranim .venv:
-
-  jarvis
-
-Pokretanje bez dva pljeska (startni clap gate):
-
-  JARVIS_SKIP_CLAP_GATE=1 JARVIS_CLI=1 python main.py
-
-Provjera bez pokretanja GUI-ja (sigurni self-test, piše izvještaj u .qa-artifacts/):
-
-  jarvis --self-test
-
-Gašenje iz terminala: Ctrl+C, ili glasom / tekstom (vidi dolje).
+  Bez pljeskanja pri startu:  JARVIS_SKIP_CLAP_GATE=1 JARVIS_CLI=1 python main.py
+  Zaustavi: Ctrl+C, ili reci "quit ARNOX" / "goodbye ARNOX".
 
 
-2. TIPKOVNI PREČACI
--------------------
-
-  F4              Uključi / isključi mikrofon (mute)
-  F6              Minimiziraj / vrati prozor
-  F11             Puni ekran
-  Ctrl+/          Pomoćni panel sa prečacima
-  Ctrl+M          Kompaktni režim
-  Ctrl+Shift+C    Otvori / zatvori Command Center
-  Ctrl+Shift+T    Promijeni boju teme
-  Enter           Pošalji komandu iz polja za unos
-  Esc             Zatvori overlay / odbaci
+1. MAIL: ČITANJE
+----------------
+  "show my inbox"                        inbox u workspaceu (25 mailova)
+  "show unread mail"                     samo nepročitani
+  "show more"                            sljedećih 25
+  "show me the mail from Alex"           otvori najnoviji mail od Alexa
+  "open message 3"                       3. mail iz liste koju si vidio
+  "find mails from Alex about invoice"   traži kroz cijelo sanduče
+  "show my sent mail"                    poslana pošta
+  "show the trash"                       smeće
 
 
-3. FIKSNE GLASOVNE NAREDBE
---------------------------
+2. MAIL: ODGOVOR, PROSLJEDI, SLANJE
+-----------------------------------
+  Prvo otvori mail ("show me the mail from Alex"), pa:
 
-Interfejs:
-  "open the Command Center"        otvori Command Center
-  "close the Command Center"       zatvori Command Center
-  "open settings"                  otvori podešavanja
-  "change theme"                   promijeni temu
-  "change graphics quality"        promijeni kvalitet grafike (low / medium / high)
-  "compact mode"                   kompaktni režim
-  "fullscreen"                     puni ekran
-  "show shortcuts"                 prikaži prečace
+  "reply: thanks, I will pay on Thursday"    odgovor, primalac i naslov se popune sami
+  "forward this to Bob"                      proslijedi s prilozima
+  "ok, send it" / "pošalji"                  šalje ono što piše u prozoru (uključujući tvoje izmjene)
+  "cancel" / "ne, odustani"                  odbacuje nacrt
 
-Kontrola zvuka i prekid:
-  "stop", "wait", "hold on", "pause", "cancel that"   prekine govor ili zadatak
-  "interrupt"                                         odmah zaustavi govor
+  Nacrt se NE šalje dok ne kažeš "send it" ili ne pritisneš SEND.
+  Ako slanje ne uspije, prozor ostaje otvoren i ARNOX kaže zašto.
 
-Sleep / pauza (crveni mod, mikrofon isključen):
-  "go to sleep", "standby", "vai in pausa", "modalità mute", "pauza", "spavaj"
-  (na bilo kojem jeziku; ARNOX kratko potvrdi, pa ode u crveno)
-  Buđenje: ukucaj bilo šta u polje za unos, ili reci "Arnox".
-  U sleep modu zvuk se NE šalje Googleu. Samo lokalni detektor na računaru sluša riječ "Arnox".
-  Ako se budi prerijetko ili prečesto, podesi prag: ARNOX_WAKE_THRESHOLD (npr. 1e-30 strože, 1e-50 osjetljivije).
-  Automatski: 60 s tišine = žuta tema, 120 s = crvena (sleep).
 
-Gašenje aplikacije (samo na izričit zahtjev):
-  "quit arnox", "goodbye arnox", "goodbye arnox please"
-  "shut down arnox", "turn off arnox", "go offline"
-  (stare varijante sa "jarvis" također rade)
-  ARNOX prvo kaže oproštajnu rečenicu, pa se tek onda gasi.
+3. MAIL: BRISANJE I PRILOZI
+---------------------------
+  "delete this email"                    u smeće (vraća se, ništa se ne briše zauvijek)
+  "restore that email"                   nazad u inbox
+  "open the attachment" / "open the PDF" prilog se otvara u workspaceu
+  "read the attachment"                  ARNOX pročita tekst priloga
+  "save the attachment"                  snima u Downloads/ARNOX Attachments
+  Klik na prilog u prozoru takođe ga otvara.
 
-Poruke i e-mail:
-  "check my messages"              pročitaj nedavne poruke
-  "send a message to ..."          pošalji poruku (traži potvrdu)
-  "reply to that"                  pripremi odgovor (traži potvrdu)
-  "is Gmail connected"             status Gmail veze
-  "show my unread Gmail"           nepročitani mailovi
-  "search Gmail for ..."           pretraga (npr. from:alex@example.com)
-  "prepare an email to ..."        otvara Gmail compose, NE šalje
-  "approve that email" / "cancel that email"
 
-Pretraga i istraživanje:
-  "search the web for ..."         brza pretraga (traži dozvolu)
-  "do deep research on ..."        duboko istraživanje (pita: pozadinski ili vidljivo)
-  "what is the status of my research"
-  "cancel research task <ID>"
+4. PISANJE NOVOG MAILA
+----------------------
+  "write a mail to Alex saying the meeting is moved to Friday"
+  "send an email to ana@example.com ..."   nacrt u workspaceu, ti potvrđuješ
 
-Prezentacije:
-  "create a presentation about ..."
-  "what is the status of my presentation"
-  "cancel presentation task <ID>"
 
-Zadaci i pozadinski poslovi:
-  "task status" / "what is running"
+5. KALENDAR
+-----------
+  "show my calendar"                     agenda po danima (Danas, Sutra, ...)
+  "what do I have tomorrow"              odgovor glasom
+  "add a meeting Friday at 14:00 called review"
+  "delete the dentist event"             ARNOX prvo pita za potvrdu, pa briše
 
-Dokumenti i prilozi:
-  "read this PDF" / "what is in this file"   pročitaj i sažmi dokument (PDF, Word, Excel, CSV, JSON, HTML, PowerPoint, txt)
-  "show attachments of that email"            lista priloga uz mail
-  "read the attachment" / "read attachment 2" pročitaj prilog (preuzima se privremeno, pa se briše)
-  "save the attachment"                       snimi prilog u Downloads/ARNOX Attachments
-  Izvršne datoteke (.exe, .dmg, ...) se nikad ne otvaraju. Skenirani PDF bez teksta se prijavi kao takav.
 
-Workspace (dokumenti unutar ARNOX prozora):
-  "show this PDF in ARNOX" / "open report.pdf on screen"     PDF u novom tabu (zum, pretraga, stranice)
-  "show the spreadsheet" / "open sales.xlsx in the workspace"  CSV/Excel kao tabela (pretraga, sortiranje, listovi)
-  "close the tab"                    zatvori trenutni tab (ili Ctrl+W dok je workspace otvoren)
-  "hide the workspace"               nazad na ARNOX jezgro (tabovi ostaju otvoreni)
-  "show the workspace"               vrati otvorene tabove
-  Dugme "BACK TO CORE" u workspaceu radi isto što i "hide the workspace".
-  Web stranice se još NE mogu prikazati unutar ARNOX-a. Spotify se ne može (nema Widevine DRM).
+6. WORKSPACE (dokumenti, sajtovi, tabovi)
+-----------------------------------------
+  Sve što otvaraš ostaje u ARNOX prozoru, ne u vanjskim programima.
 
-Web u workspaceu (https stranice i HTML fajlovi):
-  "show my Gmail in the workspace" / "open mail.google.com"    https stranica u tabu unutar ARNOX-a
-  "open report.html"                                           lokalni HTML fajl u tabu (samo taj fajl)
-  Samo https (i http na localhost) se otvara. file:, javascript: i drugi se odbijaju.
-  Iskačući prozori se otvaraju kao novi tabovi u workspaceu, ne kao prozori.
-
-Mail i kalendar u workspaceu (preko povezanog Google naloga, bez prijave u pregledniku):
-  "show my inbox in the workspace"       tabela: pošiljalac, naslov, datum, nepročitano (samo metapodaci)
-  "show unread mail in the workspace"    samo nepročitani
-  "show my calendar in the workspace"    agenda po danima (Danas, Sutra, ...): vrijeme, naslov, lokacija
-  "show me the mail from Alex"           otvara najnoviji mail od Alexa kao pravi mail (od, za, cc, datum, poruka, prilozi)
-  "open message number 3"                otvara 3. mail iz zadnje prikazanog inbox-a
-  "open the invoice email"               traži po naslovu
-  Dupli klik na red u inboxu otvara taj mail. Poruka se prikazuje samo kao običan tekst (bez linkova i slika).
-  Za čitanje naglas: "read me that email".
-
-  Poslana pošta i smeće:
-  "show my sent mail"                    lista poslanih (prikazuje primaoca)
-  "show the trash"                       obrisani mailovi
-  "delete this email"                    prebacuje otvoreni mail u smeće (vraća se, ništa se ne briše zauvijek)
-  "restore that email"                   vraća iz smeća u inbox (ili dugme "Restore to inbox" u čitaču)
-
-  Pisanje i odgovaranje (sve u ARNOX prozoru, bez Chromea):
-  "write a mail to Alex saying ..."      otvara prozor za pisanje s popunjenim nacrtom, ARNOX ga pročita
-  "reply to this email saying ..."       odgovor na mail koji je otvoren: primalac, naslov i nit se popune SAMI (adresa se ne govori)
-  "forward this to Bob"                  proslijedi otvoreni mail s prilozima
-  Nakon nacrta reci "ok, send it" / "pošalji": ARNOX šalje ono što piše u prozoru (i tvoje izmjene), pa zatvori prozor.
-  "cancel" odbacuje nacrt. Možeš i sam pritisnuti SEND u prozoru. Ništa se ne šalje dok ti to ne kažeš.
-  U čitaču su dugmad Reply i Delete; u inboxu dugme "New mail".
-  Više mailova, pretraga, prosljeđivanje i prilozi:
-  "show more mails" / "next mails"       učitava sljedećih 25 (dugme "Show more" u inboxu radi isto)
-  "find mails from Alex about invoice"   traži kroz CIJELO sanduče na Gmailu, ne samo među 25 učitanih
-                                         (u inboxu: kucanje filtrira učitano, Enter traži kroz cijelu mapu)
-  "forward this email to Bob"            prozor za prosljeđivanje s tekstom i prilozima; ti pritisneš SEND
-  "open the attachment" / "open the PDF" prilog se otvara u workspaceu (PDF, Excel, CSV, Word, PowerPoint, slike, tekst, HTML)
-  Klik na prilog u čitaču ga otvara. Fajl se privremeno preuzima i briše se kad zatvoriš tab.
-  "close the invoice tab" / "close all tabs" / "switch to the calendar" / "which tabs are open"
+  "show the CV" / "open report.pdf"      PDF u tabu (zum, pretraga)
+  "show the spreadsheet" / "open sales.xlsx"   tabela (pretraga, sortiranje)
+  "open instagram" / "open facebook.com" sajt u tabu
+  "close the invoice tab"                zatvara tab po imenu
+  "close all tabs"
+  "switch to the calendar"
+  "which tabs are open"
+  "hide the workspace" / "sakrij workspace"   samo sakriva, tabovi ostaju
+  "show the workspace"                   vraća tabove
   Svaki tab ima mali ✕ za zatvaranje.
 
-  Ako je workspace sakriven: "send an email to Alex ..." pročita nacrt naglas i šalje tek nakon tvog "yes" (preko Gmail API-ja, bez prozora).
 
-Tiha pretraga (bez prikaza, odgovor dobijaš glasom):
-  "what is the weather in Sarajevo today"     traži u pozadini, workspace se NE otvara
-  "sakrij workspace"                          samo sakriva, tabovi ostaju
-
-Fajlovi i ekran:
-  "open <putanja ili fajl>"        otvori fajl ili folder
-  "what is on my screen"           analiza ekrana (jednom po zahtjevu)
-  "take a screenshot"
-
-Muzika i video:
-  "play <pjesma>", "pause", "next", "previous"   (Spotify je default)
-  "play <video> on YouTube"
-
-Ostalo:
-  "set a reminder for ... to ..."  podsjetnik
-  "weather in <grad>"              vrijeme (traži dozvolu za web)
-  "change voice"                   promijeni glas (Puck, Charon, Kore, ...)
-  "change my name"                 promijeni ime korisnika
+7. PRETRAGA I INFORMACIJE (bez prikaza)
+---------------------------------------
+  "what is the weather in Sarajevo today"    odgovor glasom, ništa se ne otvara
+  "what is the capital of Bosnia"            kratak odgovor iz pretrage
+  "do deep research on ..."                  ARNOX pita: u pozadini ili vidljivo
 
 
-4. VAŽNA PRAVILA
-----------------
-
-  - Gmail i poruke: prvo se uvijek samo pripremi. Slanje traži tvoju
-    odvojenu potvrdu u sljedećoj poruci.
-  - Pretraga weba i duboko istraživanje traže dozvolu prije pokretanja.
-  - Ne traži lozinke glasom ni u chatu.
-  - Ako glas ne radi, provjeri dozvolu za mikrofon u System Settings.
-  - Ako je kvota Gemini ključa iscrpljena, glas i istraživanje mogu prestati.
-    Tekstualne naredbe u polju za unos rade i dalje ako je model dostupan.
+8. PRILOZI I DOKUMENTI IZ FAJLOVA
+----------------------------------
+  "read this PDF" / "what is in this file"   ARNOX pročita i sažme tekst
+  Podržano: PDF, Word, Excel, CSV, JSON, HTML, PowerPoint, slike, tekst.
+  Izvršne datoteke (.exe, .dmg, ...) se nikad ne otvaraju.
 
 
-5. KORISNE LOKACIJE
+9. GLAS I EKRAN
+---------------
+  "go to sleep" / "vai in pausa" / "pauza"   ARNOX utihne, mikrofon se gasi (crveno)
+  "wake up" / "probudi se"                   budi ga (ili ukucaj bilo šta)
+  "lock fullscreen"                          zaključaj fullscreen (samo ti otključavaš: Ctrl+Alt+U)
+  "change theme" / "make the graphics high"  podešavanja izgleda
+  "show the Command Center" / "close it"     desni panel s modulima
+  "take a screenshot" / "what is on my screen"
+
+
+10. OSTALO
+----------
+  "play some music" / "next song"            Spotify (muzika)
+  "set a reminder for 18:30 to call Mom"     podsjetnik
+  "turn the volume down"                     sistemska podešavanja
+  "make a presentation about renewable energy"
+  "write code for a todo app" / "build me a project"
+  "change your voice to Kore"                glasovi: puck, charon, kore, fenrir, aoede, leda, orus, schedar, zubenelgenubi
+
+
+11. TIŠINA I PREKID
 -------------------
-
-  .env                    GEMINI_API_KEY, glas, dodatne postavke
-  core/prompt.txt         sistemska uputa i pravila rutiranja naredbi
-  docs/USAGE.md           detaljni primjeri za svaki modul
-  docs/QA.md              provjera kvaliteta i testiranje
-  .qa-artifacts/          izvještaji iz self-testa
+  "stop" / "wait" / "cancel that"            prekida govor i zadatak
+  Ako ARNOX kaže pogrešnu stvar: "no, that is not what I meant".
 
 
-WEB APLIKACIJA (PWA) — LOKALNO POKRETANJE
+12. GAŠENJE (samo na izričit zahtjev)
+------------------------------------
+  "quit ARNOX" / "goodbye ARNOX" / "shut down ARNOX" / "go offline"
+  ARNOX kaže oproštajnu rečenicu, pa se gasi.
+
+
+13. TASTATURA
+-------------
+  F4              mikrofon: uključi / isključi
+  F11             fullscreen
+  Ctrl+/          pomoćni panel s prečacima
+  Ctrl+Shift+C    Command Center
+  Ctrl+Shift+T    promijeni temu
+  Ctrl+W          zatvori aktivni tab (dok je workspace otvoren)
+  Ctrl+Alt+U      otključaj fullscreen
+  Enter           pošalji komandu iz polja za unos
+  Esc             zatvori overlay
+
+
+14. KORISNE LOKACIJE
+--------------------
+  .env                    GEMINI_API_KEY, glas, opcije
+  core/prompt.txt         pravila kojima se ARNOX vodi
+  docs/USAGE.md           detaljni primjeri
+  docs/WINDOWS_EXE.md     kako napraviti .exe za Windows
+  .qa-artifacts/          izvještaji iz self-testa (jarvis --self-test)
+
+
+=========================================
+WEB APLIKACIJA (PWA) - LOKALNO POKRETANJE
+=========================================
 =========================================
 
 Potrebna su dva terminala. Oba počinju iz foldera projekta.
