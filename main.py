@@ -18,6 +18,7 @@ from memory.memory_manager import (
 import hashlib
 import importlib
 import time
+from datetime import datetime
 
 from core.live_model import pick_live_model
 
@@ -335,6 +336,32 @@ def _is_unsupported_voice_error(exc: Exception) -> bool:
     if code == 1007:
         return "requested voice api_name" in msg and "not available for model" in msg
     return "requested voice api_name" in msg and "not available for model" in msg
+
+
+def _startup_greeting_text(memory: dict, name: str | None = None) -> str | None:
+    """Pick the startup greeting for the current time of day from memory preferences.
+
+    Keys: startup_greeting_morning (5-11), startup_greeting_afternoon (12-17),
+    startup_greeting_evening (18-4). startup_greeting is the fallback for any hour.
+    {name} is replaced with the operator name saved in the app settings (identity.name).
+    """
+    prefs = memory.get("preferences", {}) or {}
+    hour = datetime.now().hour
+    if 5 <= hour < 12:
+        keys = ("startup_greeting_morning",)
+    elif 12 <= hour < 18:
+        keys = ("startup_greeting_afternoon",)
+    else:
+        keys = ("startup_greeting_evening",)
+    for key in keys + ("startup_greeting",):
+        entry = prefs.get(key)
+        value = entry.get("value") if isinstance(entry, dict) else entry
+        if value:
+            text = str(value)
+            if name:
+                return text.replace("{name}", name)
+            return text.replace(", {name}", "").replace("{name}", "")
+    return None
 
 
 def _load_voice_name() -> str:
@@ -1209,6 +1236,7 @@ class JarvisLive:
         self._tour_active = False
 
     def _on_text_command(self, text: str):
+        self.ui.notify_user_activity(text)
         if not self._loop or not self.session:
             return
         asyncio.run_coroutine_threadsafe(self.send_text(text), self._loop)
@@ -1440,7 +1468,13 @@ class JarvisLive:
                 name = name_entry.get("value")
             elif isinstance(name_entry, str):
                 name = name_entry
-            if name:
+            custom_text = _startup_greeting_text(memory, name)
+            if custom_text:
+                greeting = (
+                    "Say exactly the following greeting aloud, word for word, in its own language, "
+                    f"then stop and wait: {custom_text}"
+                )
+            elif name:
                 greeting = f"Arnox. At your service, {name}. What would you like to accomplish today?"
             else:
                 greeting = "Arnox. At your service. What would you like to accomplish today?"
@@ -1853,6 +1887,7 @@ class JarvisLive:
                                     self._current_input_transcript = ""
                                 in_buf.append(txt)
                                 self._current_input_transcript = " ".join(in_buf).strip()
+                                self.ui.notify_user_activity(self._current_input_transcript)
                                 if (
                                     not getattr(self, "_pending_self_quit", False)
                                     and self._is_explicit_self_quit_transcript(self._current_input_transcript)
@@ -1862,6 +1897,8 @@ class JarvisLive:
                         if sc.turn_complete:
                             if self._turn_done_event:
                                 self._turn_done_event.set()
+                            if out_buf:
+                                self.ui.notify_reply_finished()
 
                             full_in = " ".join(in_buf).strip()
                             if full_in:

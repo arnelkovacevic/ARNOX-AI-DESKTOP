@@ -425,10 +425,46 @@ class ThemeManager:
             except Exception:
                 pass
 
+    # Temporary accent palettes for the interface status. The chosen theme stays
+    # in _current; apply_status only recolours the accents until the status clears.
+    _STATUS_THEMES = {
+        "waiting": {   # yellow: ARNOX finished speaking and is waiting for the reply
+            "PRI": "#ffd400", "PRI_DIM": "#9c8200", "PRI_GHO": "#1a1500",
+            "PRI_GLOW": "#ffd40014", "ENERGY": "#ffe44d", "ENERGY_D": "#b39700",
+            "BORDER_B": "#8a7400", "TEXT": "#fff4b0", "TEXT_MED": "#c9b13a",
+        },
+        "standby": {   # red: no activity for a while, or waiting for the wake word
+            "PRI": "#ff2244", "PRI_DIM": "#800f22", "PRI_GHO": "#1a0208",
+            "PRI_GLOW": "#ff224414", "ENERGY": "#ff5570", "ENERGY_D": "#aa1133",
+            "BORDER_B": "#7a1a2a", "TEXT": "#ffc2cc", "TEXT_MED": "#c4505f",
+        },
+    }
+
+    @classmethod
+    def apply_status(cls, status: str):
+        """Recolour the accents for a status while keeping the chosen theme in place."""
+        base = cls._THEMES[cls._current]
+        override = cls._STATUS_THEMES.get(status, {})
+        for attr in cls._COLOR_KEYS:
+            if attr in override:
+                setattr(C, attr, override[attr])
+            elif attr in base:
+                setattr(C, attr, base[attr])
+        for cb in cls._listeners:
+            try:
+                cb(cls._current)
+            except Exception:
+                pass
+
     @classmethod
     def add_listener(cls, cb):
         cls._listeners.append(cb)
 
+
+# Status behaviour after a reply: stays normal, yellow after 60 s of silence,
+# red after 60 s more (120 s total). Each stage uses this interval.
+STATUS_WAITING_TIMEOUT_MS = 60_000
+WAKE_WORD = "arnox"
 
 # ---------------------------------------------------------------------------
 # ChatBubbleWidget — chat-style conversation view
@@ -6581,6 +6617,8 @@ class MainWindow(QMainWindow):
 
     _log_sig       = pyqtSignal(str)
     _state_sig     = pyqtSignal(str)
+    _status_sig    = pyqtSignal(str)     # "normal" | "waiting" | "standby"
+    _activity_sig  = pyqtSignal(str)     # user speech or typed text, for wake/clear
     _voice_sig     = pyqtSignal(str)
     _sub_sig       = pyqtSignal(str)
     _sub_clear_sig = pyqtSignal()
@@ -6782,6 +6820,12 @@ class MainWindow(QMainWindow):
 
         self._log_sig.connect(self._log.append_log)
         self._state_sig.connect(self._apply_state)
+        self._status        = "normal"
+        self._idle_timer    = QTimer(self)
+        self._idle_timer.setSingleShot(True)
+        self._idle_timer.timeout.connect(self._on_idle_timeout)
+        self._status_sig.connect(self._apply_status_theme)
+        self._activity_sig.connect(self._on_user_activity)
         self._voice_sig.connect(self._sync_voice_combo)
         self._sub_sig.connect(self._subtitle.set_text)
         self._sub_clear_sig.connect(self._subtitle.clear_subtitle)
@@ -8456,6 +8500,48 @@ class MainWindow(QMainWindow):
             except Exception:
                 print(f"[ARNOX] Message processing failed: {exc}")
 
+    def _on_idle_timeout(self):
+        """Normal -> yellow after the first idle period, yellow -> red after the second."""
+        self._status_sig.emit("waiting" if self._status == "normal" else "standby")
+
+    def _apply_status_theme(self, status: str):
+        """Stages: reply_done (theme stays) -> waiting (yellow) -> standby (red)."""
+        if status == "normal":
+            self._idle_timer.stop()
+            self._status = "normal"
+            ThemeManager.set_theme(ThemeManager.current_name())
+            return
+        if status == "reply_done":
+            if self._status == "standby":
+                return
+            if self._status == "waiting":
+                self._apply_status_theme("normal")
+            self._idle_timer.start(STATUS_WAITING_TIMEOUT_MS)
+            return
+        if status == "waiting":
+            if self._status == "standby":
+                return
+            self._status = "waiting"
+            ThemeManager.apply_status("waiting")
+            self._idle_timer.start(STATUS_WAITING_TIMEOUT_MS)
+            return
+        if status == "standby":
+            self._idle_timer.stop()
+            self._status = "standby"
+            ThemeManager.apply_status("standby")
+
+    def _on_user_activity(self, text: str):
+        """Any reply clears yellow. Only the wake word 'Arnox' clears red standby."""
+        lowered = str(text or "").lower()
+        if self._status == "standby":
+            if WAKE_WORD in lowered:
+                self._apply_status_theme("normal")
+            return
+        if self._status == "waiting":
+            self._apply_status_theme("normal")
+        else:
+            self._idle_timer.stop()
+
     def _apply_state(self, state: str):
         self.hud.state    = state
         self.hud.speaking = (state == "SPEAKING")
@@ -9118,6 +9204,16 @@ class JarvisUI:
     def stop_speaking(self):
         if not self.muted:
             self.set_state("LISTENING")
+            self._win._status_sig.emit("waiting")
+
+    def notify_reply_finished(self):
+        """ARNOX finished its reply. The theme stays; yellow follows after 60 s of silence."""
+        if not self.muted:
+            self._win._status_sig.emit("reply_done")
+
+    def notify_user_activity(self, text: str):
+        """Called from voice and text input. Clears yellow and wakes red standby."""
+        self._win._activity_sig.emit(str(text or ""))
 
     def sync_voice_display(self, voice_name: str):
         self._win._voice_sig.emit(voice_name)
