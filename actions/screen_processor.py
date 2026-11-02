@@ -95,7 +95,7 @@ _last_capture_time = 0.0
 _MIN_CAPTURE_INTERVAL = 0.5  # seconds
 
 _SYSTEM_PROMPT = (
-    "You are JARVIS, an advanced AI assistant. "
+    "You are ARNOX, an advanced AI assistant. "
     "Analyze the provided image with precision and intelligence. "
     "Be concise and direct — maximum two sentences unless the user's question "
     "requires more detail. "
@@ -416,7 +416,7 @@ class _VisionSession:
                         if transcript:
                             result_text = re.sub(r"\s+", " ", " ".join(transcript)).strip()
                         if result_text and self._player:
-                            self._player.write_log(f"Jarvis: {result_text}")
+                            self._player.write_log(f"Arnox: {result_text}")
                             print(f"[Vision] 💬 {result_text}")
                         # Set result for the pending request
                         with self._result_lock:
@@ -488,7 +488,7 @@ def screen_process(
                 print(f"[Vision] ⚠️  Speech handoff failed: {exc}")
         if player and not spoken:
             try:
-                prefix = "ERR" if error else "Jarvis"
+                prefix = "ERR" if error else "Arnox"
                 player.write_log(f"{prefix}: {message}")
             except Exception:
                 pass

@@ -30,7 +30,7 @@ try:
 except ImportError:
     _PYPERCLIP = False
 
-JARVIS_TEXT_FOOTER = "CREATED BY JARVIS"
+JARVIS_TEXT_FOOTER = "CREATED BY ARNOX"
 AMBIGUOUS_PREFIX = "RECIPIENT_AMBIGUOUS|"
 NO_MATCH_PREFIX = "RECIPIENT_NOT_FOUND|"
 MESSAGE_DUPLICATE_TTL_SECONDS = 120.0
@@ -1523,7 +1523,7 @@ def _screen_find(description: str, retries: int = 2, delay: float = 0.6) -> tupl
             img.save(buf, format="PNG")
 
             prompt = (
-                f"You are controlling a {w}x{h} screen for JARVIS messaging. "
+                f"You are controlling a {w}x{h} screen for ARNOX messaging. "
                 f"Find this exact UI target: {description}. "
                 "Prefer visible text fields, buttons, or list results in the active browser/app. "
                 "Return ONLY the center coordinate as x,y. If not visible, return NOT_FOUND."

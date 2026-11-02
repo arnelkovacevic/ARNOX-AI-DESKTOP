@@ -1,5 +1,5 @@
 @echo off
-REM Windows launcher for JARVIS.
+REM Windows launcher for ARNOX.
 REM Double-clickable from Explorer; from cmd.exe: scripts\start_jarvis.bat
 
 setlocal ENABLEDELAYEDEXPANSION
@@ -51,6 +51,6 @@ if not errorlevel 1 (
   exit /b 0
 )
 
-echo [start_jarvis] Starting JARVIS...
+echo [start_jarvis] Starting ARNOX...
 python main.py
 endlocal

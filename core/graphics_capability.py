@@ -1,4 +1,4 @@
-"""Static device-capability detection for JARVIS graphics Auto mode."""
+"""Static device-capability detection for ARNOX graphics Auto mode."""
 
 from __future__ import annotations
 

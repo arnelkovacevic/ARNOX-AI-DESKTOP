@@ -137,10 +137,10 @@ class UIRegressionTests(unittest.TestCase):
 
     def test_explicit_self_quit_commands_route_to_jarvis(self):
         for command in (
-            "quit JARVIS",
+            "quit ARNOX",
             "shut yourself down",
-            "JARVIS, turn yourself off",
-            "go offline JARVIS",
+            "ARNOX, turn yourself off",
+            "go offline ARNOX",
         ):
             self.assertEqual(ui.route_jarvis_ui_command(command), ("quit_jarvis", None))
         self.assertIsNone(ui.route_jarvis_ui_command("shut down my computer"))
@@ -149,15 +149,15 @@ class UIRegressionTests(unittest.TestCase):
     def test_quit_button_is_visible_and_accessible(self):
         button = self.window._quit_btn
         self.assertEqual(button.objectName(), "JarvisQuitButton")
-        self.assertEqual(button.accessibleName(), "Quit JARVIS")
-        self.assertEqual(button.toolTip(), "Quit JARVIS")
+        self.assertEqual(button.accessibleName(), "Quit ARNOX")
+        self.assertEqual(button.toolTip(), "Quit ARNOX")
         self.assertFalse(button.isHidden())
 
     def test_dock_uses_crisp_command_rail_visual_language(self):
         rail = self.window._dock_frame
         style = rail.styleSheet().lower()
         self.assertEqual(rail.objectName(), "JarvisCommandRail")
-        self.assertEqual(rail.accessibleName(), "JARVIS command rail")
+        self.assertEqual(rail.accessibleName(), "ARNOX command rail")
         self.assertIsNone(rail.graphicsEffect())
         self.assertNotIn("qlineargradient", style)
         self.assertNotIn("border-radius: 24px", style)
@@ -200,7 +200,7 @@ class UIRegressionTests(unittest.TestCase):
     def test_quit_command_uses_shared_shutdown_path(self):
         with patch.object(self.window, "_request_quit") as request_quit, \
              patch.object(ui.QTimer, "singleShot", side_effect=lambda _delay, callback: callback()):
-            self.assertTrue(self.window._handle_ui_command("quit JARVIS"))
+            self.assertTrue(self.window._handle_ui_command("quit ARNOX"))
         request_quit.assert_called_once_with()
 
     def test_setup_overlay_is_centered_after_first_show(self):
@@ -485,10 +485,10 @@ class UIRegressionTests(unittest.TestCase):
         self.assertNotIn("showFullScreen", source)
 
     def test_intro_captions_use_the_live_subtitle_widget(self):
-        self.window._show_intro_caption("Good evening. I am JARVIS.")
+        self.window._show_intro_caption("Good evening. I am ARNOX.")
         self.assertEqual(
             self.window._subtitle._chunks,
-            [["Good", "evening.", "I", "am", "JARVIS."]],
+            [["Good", "evening.", "I", "am", "ARNOX."]],
         )
         self.window._show_intro_caption("Communications linked.")
         self.assertEqual(
@@ -662,12 +662,12 @@ class UIRegressionTests(unittest.TestCase):
             patch("google.genai.Client", return_value=client),
         ):
             pcm = asyncio.run(ui._render_intro_with_live(
-                "JARVIS online.", "charon", "test-key"
+                "ARNOX online.", "charon", "test-key"
             ))
         self.assertEqual(pcm, b"\x01\x00" * 64)
         request = client.aio.models.generate_content.await_args.kwargs
         self.assertEqual(request["model"], ui.INTRO_TTS_MODELS[0])
-        self.assertEqual(request["contents"], "JARVIS online.")
+        self.assertEqual(request["contents"], "ARNOX online.")
         config = request["config"]
         self.assertEqual(config.response_modalities, ["AUDIO"])
         self.assertIsNone(config.tools)
@@ -910,7 +910,7 @@ class UIRegressionTests(unittest.TestCase):
         original_entries = list(entries)
         entries.clear()
         try:
-            self.window._parse_log_for_context("SYS: JARVIS online.")
+            self.window._parse_log_for_context("SYS: ARNOX online.")
             self.app.processEvents()
             self.assertEqual(entries, [])
 
@@ -981,14 +981,14 @@ class UIRegressionTests(unittest.TestCase):
         self.assertIn("timeout=90.0", source)
 
     def test_tour_and_greeting_use_distinct_caches(self):
-        narration = "JARVIS online."
+        narration = "ARNOX online."
         self.assertNotEqual(
             ui._intro_voice_cache_path("charon", narration, "tour"),
             ui._intro_voice_cache_path("charon", narration, "greeting"),
         )
 
     def test_each_selected_voice_uses_its_own_intro_cache(self):
-        narration = "JARVIS online."
+        narration = "ARNOX online."
         self.assertNotEqual(
             ui._intro_voice_cache_path("charon", narration, "tour"),
             ui._intro_voice_cache_path("kore", narration, "tour"),

@@ -1,4 +1,4 @@
-"""Transport-neutral client contract for the JARVIS live engine."""
+"""Transport-neutral client contract for the ARNOX live engine."""
 
 from __future__ import annotations
 

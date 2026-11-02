@@ -90,7 +90,7 @@ class QAReport:
         passed = sum(check.status == "passed" for check in self.checks)
         failed = sum(check.status == "failed" for check in self.checks)
         lines = [
-            "# JARVIS QA Report",
+            "# ARNOX QA Report",
             "",
             f"- Run: `{self.run_id}`",
             f"- Mode: `{self.mode}`",

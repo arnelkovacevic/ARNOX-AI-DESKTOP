@@ -1,1 +1,1 @@
-"""Hosted JARVIS API package."""
+"""Hosted ARNOX API package."""

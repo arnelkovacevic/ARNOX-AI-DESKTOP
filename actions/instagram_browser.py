@@ -423,7 +423,7 @@ class _InstagramBrowser:
         return False
 
     def _login_message(self) -> str:
-        return "Instagram login required. I opened the JARVIS Instagram browser; log in there, then try again."
+        return "Instagram login required. I opened the ARNOX Instagram browser; log in there, then try again."
 
     def _read_rows(self, page) -> list[dict]:
         rows = page.evaluate(
@@ -673,18 +673,18 @@ class _InstagramBrowser:
                 return None, (
                     "Instagram's daily-limit notification is still blocking the DM list. "
                     "I tried to close it automatically, but Instagram did not dismiss it. "
-                    "Close that popup in the JARVIS Instagram browser, then try again. "
+                    "Close that popup in the ARNOX Instagram browser, then try again. "
                     f"Debug: url={url or 'unknown'}, title={title or 'unknown'}, visible_text={body_sample or 'none'}"
                 )
             return None, (
-                "I could not read your Instagram DM list. Log into the JARVIS Instagram browser and open Direct Messages, then try again. "
+                "I could not read your Instagram DM list. Log into the ARNOX Instagram browser and open Direct Messages, then try again. "
                 f"Debug: url={url or 'unknown'}, title={title or 'unknown'}, visible_text={body_sample or 'none'}"
             )
         sample = ", ".join(str(row.get("name", "")) for row in all_rows[:8])
         return None, (
             f"{NO_MATCH_PREFIX}No recent Instagram chat sounded like '{receiver}'. "
             f"Visible chats: {sample}. I only search chats already in your Instagram messages, not global Instagram search. "
-            "Open that DM in the JARVIS Instagram browser and leave the recipient blank, or message someone from the visible/recent DM list."
+            "Open that DM in the ARNOX Instagram browser and leave the recipient blank, or message someone from the visible/recent DM list."
         )
 
     def _open_chat(self, page, chat: dict) -> bool:
@@ -1014,10 +1014,10 @@ class _InstagramBrowser:
         else:
             recipient = self._active_recipient(page)
             if not recipient:
-                return "Open an Instagram DM in the JARVIS Instagram browser, or provide a recipient name."
+                return "Open an Instagram DM in the ARNOX Instagram browser, or provide a recipient name."
 
         if not self._fill_composer(page, message):
-            return "I could not type into the Instagram composer. Keep the JARVIS Instagram browser on the desired DM and try again."
+            return "I could not type into the Instagram composer. Keep the ARNOX Instagram browser on the desired DM and try again."
 
         self._pending = {
             "recipient": recipient,
@@ -1032,7 +1032,7 @@ class _InstagramBrowser:
         if self._login_required(page):
             return self._login_message()
         if not self._pending:
-            return "Could not find a pending Instagram draft. Ask JARVIS to prepare the Instagram message again."
+            return "Could not find a pending Instagram draft. Ask ARNOX to prepare the Instagram message again."
         self._dismiss_interruptions(page)
 
         pending_url = str(self._pending.get("url") or "").split("?", 1)[0].rstrip("/")

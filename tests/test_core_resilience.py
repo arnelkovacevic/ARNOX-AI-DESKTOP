@@ -94,11 +94,11 @@ class CoreResilienceTests(unittest.TestCase):
 
     def test_awareness_state_is_copied_and_bounded(self):
         engine = AwarenessEngine(lambda *_: None)
-        engine.set_goal("Audit JARVIS")
+        engine.set_goal("Audit ARNOX")
         for index in range(25):
             engine.record_event(f"event-{index}")
         state = engine.get_state()
-        self.assertEqual(state.current_goal, "Audit JARVIS")
+        self.assertEqual(state.current_goal, "Audit ARNOX")
         self.assertEqual(len(state.recent_events), 20)
 
 
@@ -121,7 +121,7 @@ class PureActionContractTests(unittest.TestCase):
         self.assertTrue(ambiguous)
 
     def test_computer_power_target_must_be_explicit(self):
-        self.assertFalse(computer_settings._has_explicit_computer_power_target({}, "restart JARVIS", None))
+        self.assertFalse(computer_settings._has_explicit_computer_power_target({}, "restart ARNOX", None))
         self.assertTrue(computer_settings._has_explicit_computer_power_target({}, "restart my computer", None))
 
     def test_weather_failure_is_returned_instead_of_raised(self):

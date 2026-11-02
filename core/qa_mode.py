@@ -1,4 +1,4 @@
-"""Safety boundary used by the reusable JARVIS QA harness.
+"""Safety boundary used by the reusable ARNOX QA harness.
 
 QA mode is intentionally opt-in. Normal runtime behavior is unchanged unless
 ``JARVIS_QA_MODE=1`` is present in the environment.

@@ -1,4 +1,4 @@
-"""Request-local tenant identity shared by hosted JARVIS services."""
+"""Request-local tenant identity shared by hosted ARNOX services."""
 
 from __future__ import annotations
 

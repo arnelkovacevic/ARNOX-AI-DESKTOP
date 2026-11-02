@@ -129,7 +129,7 @@ class QAModeSafetyTests(unittest.TestCase):
         self.assertIn("Ignored an unverified shutdown request", blocked)
         self.assertEqual(commands, [])
 
-        jarvis._current_input_transcript = "JARVIS, shut yourself down."
+        jarvis._current_input_transcript = "ARNOX, shut yourself down."
         allowed = jarvis._intercept_ui_tool_call(
             "jarvis_ui_control", {"action": "quit_jarvis"}
         )
@@ -152,7 +152,7 @@ class QAModeSafetyTests(unittest.TestCase):
 
         jarvis._mark_self_quit_farewell_received()
         self.assertTrue(jarvis._complete_self_quit_after_audio())
-        self.assertEqual(commands, ["Quit JARVIS"])
+        self.assertEqual(commands, ["Quit ARNOX"])
         self.assertFalse(jarvis._pending_self_quit)
         self.assertFalse(jarvis._pending_self_quit_farewell_received)
 

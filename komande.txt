@@ -1,0 +1,124 @@
+ARNOX CORE - KOMANDE
+====================
+
+1. POKRETANJE U TERMINALU
+-------------------------
+
+Otvori Terminal, pa:
+
+  cd /Users/arnel/Desktop/JARVIS-DESKTOP/JARVIS-OS-V.2
+  source .venv/bin/activate
+  JARVIS_CLI=1 python main.py
+
+Ili kraće, sa aktiviranim .venv:
+
+  jarvis
+
+Pokretanje bez dva pljeska (startni clap gate):
+
+  JARVIS_SKIP_CLAP_GATE=1 JARVIS_CLI=1 python main.py
+
+Provjera bez pokretanja GUI-ja (sigurni self-test, piše izvještaj u .qa-artifacts/):
+
+  jarvis --self-test
+
+Gašenje iz terminala: Ctrl+C, ili glasom / tekstom (vidi dolje).
+
+
+2. TIPKOVNI PREČACI
+-------------------
+
+  F4              Uključi / isključi mikrofon (mute)
+  F6              Minimiziraj / vrati prozor
+  F11             Puni ekran
+  Ctrl+/          Pomoćni panel sa prečacima
+  Ctrl+M          Kompaktni režim
+  Ctrl+Shift+C    Otvori / zatvori Command Center
+  Ctrl+Shift+T    Promijeni boju teme
+  Enter           Pošalji komandu iz polja za unos
+  Esc             Zatvori overlay / odbaci
+
+
+3. FIKSNE GLASOVNE NAREDBE
+--------------------------
+
+Interfejs:
+  "open the Command Center"        otvori Command Center
+  "close the Command Center"       zatvori Command Center
+  "open settings"                  otvori podešavanja
+  "change theme"                   promijeni temu
+  "change graphics quality"        promijeni kvalitet grafike (low / medium / high)
+  "compact mode"                   kompaktni režim
+  "fullscreen"                     puni ekran
+  "show shortcuts"                 prikaži prečace
+
+Kontrola zvuka i prekid:
+  "stop", "wait", "hold on", "pause", "cancel that"   prekine govor ili zadatak
+  "interrupt"                                         odmah zaustavi govor
+
+Gašenje aplikacije (samo na izričit zahtjev):
+  "quit arnox", "goodbye arnox", "goodbye arnox please"
+  "shut down arnox", "turn off arnox", "go offline"
+  (stare varijante sa "jarvis" također rade)
+  ARNOX prvo kaže oproštajnu rečenicu, pa se tek onda gasi.
+
+Poruke i e-mail:
+  "check my messages"              pročitaj nedavne poruke
+  "send a message to ..."          pošalji poruku (traži potvrdu)
+  "reply to that"                  pripremi odgovor (traži potvrdu)
+  "is Gmail connected"             status Gmail veze
+  "show my unread Gmail"           nepročitani mailovi
+  "search Gmail for ..."           pretraga (npr. from:alex@example.com)
+  "prepare an email to ..."        otvara Gmail compose, NE šalje
+  "approve that email" / "cancel that email"
+
+Pretraga i istraživanje:
+  "search the web for ..."         brza pretraga (traži dozvolu)
+  "do deep research on ..."        duboko istraživanje (pita: pozadinski ili vidljivo)
+  "what is the status of my research"
+  "cancel research task <ID>"
+
+Prezentacije:
+  "create a presentation about ..."
+  "what is the status of my presentation"
+  "cancel presentation task <ID>"
+
+Zadaci i pozadinski poslovi:
+  "task status" / "what is running"
+
+Fajlovi i ekran:
+  "open <putanja ili fajl>"        otvori fajl ili folder
+  "what is on my screen"           analiza ekrana (jednom po zahtjevu)
+  "take a screenshot"
+
+Muzika i video:
+  "play <pjesma>", "pause", "next", "previous"   (Spotify je default)
+  "play <video> on YouTube"
+
+Ostalo:
+  "set a reminder for ... to ..."  podsjetnik
+  "weather in <grad>"              vrijeme (traži dozvolu za web)
+  "change voice"                   promijeni glas (Puck, Charon, Kore, ...)
+  "change my name"                 promijeni ime korisnika
+
+
+4. VAŽNA PRAVILA
+----------------
+
+  - Gmail i poruke: prvo se uvijek samo pripremi. Slanje traži tvoju
+    odvojenu potvrdu u sljedećoj poruci.
+  - Pretraga weba i duboko istraživanje traže dozvolu prije pokretanja.
+  - Ne traži lozinke glasom ni u chatu.
+  - Ako glas ne radi, provjeri dozvolu za mikrofon u System Settings.
+  - Ako je kvota Gemini ključa iscrpljena, glas i istraživanje mogu prestati.
+    Tekstualne naredbe u polju za unos rade i dalje ako je model dostupan.
+
+
+5. KORISNE LOKACIJE
+-------------------
+
+  .env                    GEMINI_API_KEY, glas, dodatne postavke
+  core/prompt.txt         sistemska uputa i pravila rutiranja naredbi
+  docs/USAGE.md           detaljni primjeri za svaki modul
+  docs/QA.md              provjera kvaliteta i testiranje
+  .qa-artifacts/          izvještaji iz self-testa

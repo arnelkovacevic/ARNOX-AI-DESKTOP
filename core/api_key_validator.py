@@ -95,7 +95,7 @@ def _basic_key_check(api_key: str) -> ApiKeyValidationResult | None:
     if any(ch.isspace() for ch in key):
         return ApiKeyValidationResult(False, "Paste the raw Gemini API key value, not surrounding text.")
     if key.startswith("sk-ant-"):
-        return ApiKeyValidationResult(False, "That is an Anthropic key. JARVIS requires a Gemini API key.")
+        return ApiKeyValidationResult(False, "That is an Anthropic key. ARNOX requires a Gemini API key.")
     if key.startswith(("sk-", "sess-", "proj-")):
         return ApiKeyValidationResult(False, "That is not a Gemini key. Use a key created in Google AI Studio.")
     # Gemini now supports more than one API-key type. Do not require the

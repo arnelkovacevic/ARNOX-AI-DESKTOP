@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# JARVIS command-line launcher. Works directly or through a symlink in PATH.
+# ARNOX command-line launcher. Works directly or through a symlink in PATH.
 set -e
 
 SOURCE="${BASH_SOURCE[0]}"

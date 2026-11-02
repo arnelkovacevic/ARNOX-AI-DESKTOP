@@ -1,14 +1,14 @@
-# JARVIS — Usage Guide
+# ARNOX — Usage Guide
 
 This guide is focused on **daily usage** once you’ve installed and started the app.
 
-## Start Jarvis
+## Start Arnox
 
 ```bash
 jarvis
 ```
 
-If `GEMINI_API_KEY` is set correctly, Jarvis will:
+If `GEMINI_API_KEY` is set correctly, Arnox will:
 - open the UI
 - start microphone audio
 - connect to Gemini Live
@@ -53,10 +53,10 @@ Gmail uses Google OAuth rather than an API key or Gmail password. One-time setup
 4. Add the scopes `gmail.readonly` and `gmail.send`.
 5. Create an OAuth Client ID with application type **Desktop app** and download
    its JSON file.
-6. Drag that JSON into JARVIS and say: “Connect Gmail using this file.”
+6. Drag that JSON into ARNOX and say: “Connect Gmail using this file.”
 7. Complete Google's consent page in the browser that opens.
 
-JARVIS stores the refresh credential in the operating-system keychain, not in
+ARNOX stores the refresh credential in the operating-system keychain, not in
 `token.json` or the project configuration. Example commands:
 
 - “Is Gmail connected?”
@@ -68,18 +68,18 @@ JARVIS stores the refresh credential in the operating-system keychain, not in
 - “Cancel that email.”
 - “Disconnect Gmail.”
 
-Preparing a Gmail email never sends it. JARVIS opens a visible Gmail compose window,
+Preparing a Gmail email never sends it. ARNOX opens a visible Gmail compose window,
 types the recipient, optional Cc/Bcc, subject, and body in sequence, then leaves the
 draft open for review. A separate explicit approval verifies that the visible draft
 still matches and clicks Gmail's Send button. On first use, sign in to Gmail inside
-the JARVIS-controlled Chrome profile when prompted, then ask JARVIS to prepare the
-email again. If the Gmail API connection already identifies the account, JARVIS
+the ARNOX-controlled Chrome profile when prompted, then ask ARNOX to prepare the
+email again. If the Gmail API connection already identifies the account, ARNOX
 prefills that address and waits while you complete Google's password or 2FA screen;
-JARVIS never reads or stores those credentials. The browser session remains signed
+ARNOX never reads or stores those credentials. The browser session remains signed
 in for later drafts.
 
 ### 7) Deep Research
-JARVIS can investigate a complex question across multiple searches, compare evidence,
+ARNOX can investigate a complex question across multiple searches, compare evidence,
 surface disagreements and uncertainty, and save a cited report.
 Examples:
 
@@ -89,24 +89,24 @@ Examples:
 - “What is the status of my research?”
 - “Cancel research task 4f2a8c10.”
 
-Before research begins, JARVIS asks whether you want it to run quietly in the
+Before research begins, ARNOX asks whether you want it to run quietly in the
 background or let you watch the research. Background mode shows a compact bar
 labeled `RUNNING IN THE BACKGROUND` and keeps browser windows closed. Visible
-mode opens JARVIS's controlled browser, performs each search, and visits sources
+mode opens ARNOX's controlled browser, performs each search, and visits sources
 in separate tabs so you can follow the investigation. No research starts while
-JARVIS is waiting for that choice.
+ARNOX is waiting for that choice.
 
 Research depth can be `quick`, `standard` (default), or `deep`. Reports are saved as
-Markdown only when you explicitly ask JARVIS to save them. Until then, the report,
+Markdown only when you explicitly ask ARNOX to save them. Until then, the report,
 search plan, evidence, and sources remain in volatile memory and are not written to
-task history or `outputs/research`. When research finishes, JARVIS gives a detailed
+task history or `outputs/research`. When research finishes, ARNOX gives a detailed
 summary and offers to save the report to Files, save it to Desktop, or read the
 entire report aloud. Deep Research requires a valid Gemini API key. Source gathering uses direct web search so one research
 run does not exhaust the Gemini request quota. Gemini is used for final synthesis
-when quota is available; otherwise JARVIS keeps a source-first fallback report in memory.
+when quota is available; otherwise ARNOX keeps a source-first fallback report in memory.
 
 ### 8) PowerPoint presentations
-JARVIS can create, edit, redesign, and extend editable widescreen `.pptx` decks.
+ARNOX can create, edit, redesign, and extend editable widescreen `.pptx` decks.
 Presentation jobs run in the background, report progress through `task_status`,
 and export a PDF when Microsoft PowerPoint is available. Examples:
 
@@ -119,11 +119,11 @@ and export a PDF when Microsoft PowerPoint is available. Examples:
 - “Cancel presentation task 4f2a8c10.”
 
 Available themes are `arc_reactor`, `executive`, and `platinum`. By default,
-presentations are saved in `Desktop/JARVIS Presentations`. Quality modes are
+presentations are saved in `Desktop/ARNOX Presentations`. Quality modes are
 `fast`, `quality` (default), and `premium`, with a maximum of 50 slides.
 
 Sources may include PDF, Word, PowerPoint, Excel, CSV, JSON, Markdown, text,
-images, audio, video, or specific URLs. JARVIS uses supplied sources first and
+images, audio, video, or specific URLs. ARNOX uses supplied sources first and
 will only perform broader web research after you explicitly allow it. Supplied
 decks are never overwritten during edit, redesign, or extension jobs.
 
@@ -136,16 +136,16 @@ If you see:
 Fix:
 - ensure `.env` exists in the repo root
 - set `GEMINI_API_KEY`
-- restart Jarvis
+- restart Arnox
 
 ### Voice not available
-If Jarvis can’t use your selected voice, it will fall back to the default voice (`puck`).
+If Arnox can’t use your selected voice, it will fall back to the default voice (`puck`).
 
 Fix:
 - set `GEMINI_VOICE_NAME` to a supported voice name from `main.py`
 
 ### If tools fail
-Jarvis usually logs errors to the UI log.
+Arnox usually logs errors to the UI log.
 
 Fix:
 - check environment permissions (mic, display, etc.)

@@ -1,4 +1,4 @@
-# JARVIS bundled fonts
+# ARNOX bundled fonts
 
 - Space Grotesk variable font: primary interface and dialogue typeface.
 - JetBrains Mono variable font: telemetry, timestamps, IDs, and terminal-style data.

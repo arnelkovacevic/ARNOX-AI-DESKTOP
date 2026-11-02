@@ -1,4 +1,4 @@
-"""Cancellable, source-grounded deep research for JARVIS."""
+"""Cancellable, source-grounded deep research for ARNOX."""
 
 from __future__ import annotations
 
@@ -228,7 +228,7 @@ def _duckduckgo_html_search(query: str, max_results: int) -> list[dict]:
     response = requests.get(
         "https://html.duckduckgo.com/html/",
         params={"q": query},
-        headers={"User-Agent": "Mozilla/5.0 JARVIS Research"},
+        headers={"User-Agent": "Mozilla/5.0 ARNOX Research"},
         timeout=18,
     )
     response.raise_for_status()
@@ -259,7 +259,7 @@ def _bing_html_search(query: str, max_results: int) -> list[dict]:
     response = requests.get(
         "https://www.bing.com/search",
         params={"q": query, "count": max_results},
-        headers={"User-Agent": "Mozilla/5.0 JARVIS Research"},
+        headers={"User-Agent": "Mozilla/5.0 ARNOX Research"},
         timeout=18,
     )
     response.raise_for_status()
@@ -345,7 +345,7 @@ def _open_visible_research(
     opened_urls: set[str] | None = None,
     cancel_flag=None,
 ) -> list[str]:
-    """Drive JARVIS's controlled browser through the query and one new source tab."""
+    """Drive ARNOX's controlled browser through the query and one new source tab."""
     from actions.browser_control import browser_control
 
     opened_urls = opened_urls if opened_urls is not None else set()
@@ -505,7 +505,7 @@ def _fallback_synthesis(
     evidence_text = "\n".join(findings) or "- No readable evidence extracts were returned."
     return f"""## Executive summary
 
-JARVIS reviewed {len(sources)} distinct web sources for this question. The synthesis model was unavailable, so this report preserves the retrieved evidence directly instead of inventing a conclusion. The strongest probable answer should be drawn from the recurring claims below and checked against the linked sources.
+ARNOX reviewed {len(sources)} distinct web sources for this question. The synthesis model was unavailable, so this report preserves the retrieved evidence directly instead of inventing a conclusion. The strongest probable answer should be drawn from the recurring claims below and checked against the linked sources.
 
 ## Retrieved evidence
 
@@ -562,9 +562,9 @@ def _save_report(result: ResearchResult, destination: str, output_path: str = ""
             else candidate / f"{_slug(result.question)}-{stamp}.md"
         )
     elif destination == "desktop":
-        report_path = Path.home() / "Desktop" / "JARVIS Research" / f"{_slug(result.question)}-{stamp}.md"
+        report_path = Path.home() / "Desktop" / "ARNOX Research" / f"{_slug(result.question)}-{stamp}.md"
     else:
-        report_path = Path.home() / "Documents" / "JARVIS Research" / f"{_slug(result.question)}-{stamp}.md"
+        report_path = Path.home() / "Documents" / "ARNOX Research" / f"{_slug(result.question)}-{stamp}.md"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(result.report_markdown, encoding="utf-8")
     if report_path not in result.saved_paths:

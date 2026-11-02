@@ -148,7 +148,7 @@ def create_file(path: str, name: str = "", content: str = "") -> str:
         write_text_with_stamp(
             target,
             content,
-            f"Created through JARVIS file_controller create_file action for {target.name}.",
+            f"Created through ARNOX file_controller create_file action for {target.name}.",
         )
         return f"File saved: {target} ({target.stat().st_size} bytes)"
     except Exception as e:
@@ -242,10 +242,10 @@ def copy_file(path: str, name: str = "", destination: str = "") -> str:
             shutil.copytree(str(src), str(dst))
             for child in dst.rglob("*"):
                 if child.is_file() and not child.name.endswith(".jarvis_meta.json"):
-                    write_sidecar_metadata(child, f"Copied by JARVIS from {src}.")
+                    write_sidecar_metadata(child, f"Copied by ARNOX from {src}.")
         else:
             shutil.copy2(str(src), str(dst))
-            write_sidecar_metadata(dst, f"Copied by JARVIS from {src}.")
+            write_sidecar_metadata(dst, f"Copied by ARNOX from {src}.")
 
         return f"Copied: {src.name} → {dst.parent.name}/"
 
@@ -342,7 +342,7 @@ def write_file(path: str, name: str = "", content: str = "",
             write_text_with_stamp(
                 target,
                 content,
-                f"Written through JARVIS file_controller write action for {target.name}.",
+                f"Written through ARNOX file_controller write action for {target.name}.",
             )
             return f"Written to: {target.name}"
         mode = "a" if append else "w"

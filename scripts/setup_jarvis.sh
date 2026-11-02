@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Guided one-command setup for JARVIS on macOS/Linux.
+# Guided one-command setup for ARNOX on macOS/Linux.
 set -e
 
 SOURCE="${BASH_SOURCE[0]}"
@@ -12,7 +12,7 @@ PROJECT_ROOT="$(cd -P "$(dirname "$SOURCE")/.." >/dev/null 2>&1 && pwd)"
 cd "$PROJECT_ROOT"
 
 PYTHON_BIN="${PYTHON_BIN:-python3}"
-echo "JARVIS setup"
+echo "ARNOX setup"
 echo "────────────"
 
 if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
@@ -21,7 +21,7 @@ if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
 fi
 
 if [ ! -x ".venv/bin/python" ]; then
-  echo "Creating the JARVIS virtual environment..."
+  echo "Creating the ARNOX virtual environment..."
   "$PYTHON_BIN" -m venv .venv
 fi
 

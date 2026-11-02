@@ -1,4 +1,4 @@
-"""Shared Gemini Live model selection for startup audio and active JARVIS."""
+"""Shared Gemini Live model selection for startup audio and active ARNOX."""
 
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ def pick_live_model(client, config_path: Path) -> str:
         models = list(client.models.list())
     except Exception as exc:
         print(
-            f"[JARVIS] Could not list Gemini models; using configured "
+            f"[ARNOX] Could not list Gemini models; using configured "
             f"live_model={configured}: {exc}"
         )
         return configured
@@ -70,5 +70,5 @@ def pick_live_model(client, config_path: Path) -> str:
         return (3, name)
 
     selected = sorted(live_models, key=score)[0]
-    print(f"[JARVIS] Auto-selected Live model: {selected}")
+    print(f"[ARNOX] Auto-selected Live model: {selected}")
     return selected

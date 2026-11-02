@@ -153,7 +153,7 @@ class HostedApiTests(unittest.TestCase):
                     await asyncio.sleep(0.01)
 
             async def send_text(self, text):
-                self.client.write_log(f"Jarvis: Echo: {text}")
+                self.client.write_log(f"Arnox: Echo: {text}")
                 return True
 
             async def send_audio_chunk(self, _data, _mime_type="audio/pcm;rate=16000"):
@@ -194,7 +194,7 @@ class WebSocketAdapterTests(unittest.TestCase):
             client = WebSocketClient(socket)
             sender = asyncio.create_task(client.send_events())
             client.set_state("LISTENING")
-            client.write_log("Jarvis: Online.")
+            client.write_log("Arnox: Online.")
             client.send_audio(b"\x01\x02")
             await asyncio.sleep(0)
             await client.close()

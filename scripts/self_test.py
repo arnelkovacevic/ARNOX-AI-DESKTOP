@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Side-effect-safe capability certification for the development JARVIS build."""
+"""Side-effect-safe capability certification for the development ARNOX build."""
 
 from __future__ import annotations
 
@@ -325,7 +325,7 @@ def run() -> tuple[list[CapabilityResult], Path]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Run side-effect-safe JARVIS capability checks.")
+    parser = argparse.ArgumentParser(description="Run side-effect-safe ARNOX capability checks.")
     parser.parse_args(argv)
     results, _ = run()
     return 1 if any(result.status == "FAIL" for result in results) else 0

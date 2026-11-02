@@ -2,7 +2,7 @@
 
 Gmail reading uses Google's desktop OAuth flow. Refresh credentials are stored
 only in the operating-system keychain, never in a token file. New Gmail drafts
-are typed into JARVIS's controlled browser and sent only after a later explicit
+are typed into ARNOX's controlled browser and sent only after a later explicit
 approval. Pending drafts live in memory only.
 """
 
@@ -38,6 +38,8 @@ _TENANT_GMAIL_ACCOUNTS: dict[str, str] = {}
 GMAIL_SCOPES = (
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/gmail.modify",
+    "https://www.googleapis.com/auth/calendar.events",
 )
 _GMAIL_TOKEN_KEY = "gmail_oauth_credentials"
 _GMAIL_ACCOUNT_KEY = "gmail_account_email"
@@ -170,7 +172,7 @@ def _load_gmail_credentials():
     if not payload:
         raise GmailConnectionError(
             "Gmail is not connected. Download a Desktop app OAuth credentials JSON file, "
-            "then tell JARVIS: connect Gmail using this file."
+            "then tell ARNOX: connect Gmail using this file."
         )
     try:
         credentials = Credentials.from_authorized_user_info(json.loads(payload), list(GMAIL_SCOPES))
@@ -229,7 +231,7 @@ def _gmail_connect(credentials_path: str = "") -> str:
         return (
             "Gmail needs a Google Desktop OAuth credentials JSON file. In Google Cloud: enable the Gmail API, "
             "configure the OAuth consent screen, create an OAuth Client ID with application type Desktop app, "
-            "download the JSON, then drag it into JARVIS and say: connect Gmail using this file."
+            "download the JSON, then drag it into ARNOX and say: connect Gmail using this file."
         )
     try:
         flow = InstalledAppFlow.from_client_secrets_file(str(path), list(GMAIL_SCOPES))
@@ -240,7 +242,7 @@ def _gmail_connect(credentials_path: str = "") -> str:
             timeout_seconds=240,
             access_type="offline",
             prompt="consent",
-            success_message="Gmail is connected to JARVIS. You can close this browser tab.",
+            success_message="Gmail is connected to ARNOX. You can close this browser tab.",
         )
         service = build("gmail", "v1", credentials=credentials, cache_discovery=False)
         profile = service.users().getProfile(userId="me").execute()
@@ -290,8 +292,9 @@ def _gmail_api_error(exc: Exception, operation: str) -> str:
         return "The Gmail connection expired or was revoked. Connect Gmail again."
     if status == 403:
         return (
-            f"Gmail {operation} was denied. Confirm the Gmail API is enabled and the OAuth consent screen "
-            "includes gmail.readonly and gmail.send."
+            f"Gmail {operation} was denied. Confirm the Gmail API and Google Calendar API are enabled, "
+            "and connect Gmail again so ARNOX can request the newer permissions "
+            "(gmail.modify and calendar.events)."
         )
     if status == 429:
         return "Gmail is temporarily rate-limiting requests. Try again shortly."
@@ -464,7 +467,7 @@ def _gmail_login_progress(player, message: str) -> None:
 async def _assist_gmail_sign_in(page, player=None, timeout_seconds: float = 90.0) -> bool:
     """Select the connected account, then wait for Google's password/2FA step.
 
-    JARVIS never reads or stores a Google password. The persistent browser profile
+    ARNOX never reads or stores a Google password. The persistent browser profile
     retains the resulting Google session after the user completes sign-in once.
     """
     account = _gmail_account().strip()
@@ -551,7 +554,7 @@ async def _open_gmail_compose_fields(session, player=None):
         if not await _assist_gmail_sign_in(page, player=player):
             return page, None, (
                 "Gmail is waiting for Google sign-in. Complete the password or 2FA step in the open "
-                "JARVIS Chrome window, then ask me to prepare the email again. JARVIS never stores your password."
+                "ARNOX Chrome window, then ask me to prepare the email again. ARNOX never stores your password."
             )
         try:
             await page.goto(compose_url, wait_until="domcontentloaded", timeout=45_000)
@@ -601,7 +604,7 @@ async def _open_gmail_compose_fields(session, player=None):
             pass
         if "sign in" in page_text.lower():
             return page, None, "Gmail requires a browser sign-in. Sign in, then ask me to prepare the email again."
-        return page, None, "Gmail opened, but JARVIS could not find a new compose window. Open Gmail once, finish any sign-in prompts, and try again."
+        return page, None, "Gmail opened, but ARNOX could not find a new compose window. Open Gmail once, finish any sign-in prompts, and try again."
 
     to_field = await _first_visible(page, (
         'input[aria-label^="To recipients" i]',
@@ -611,7 +614,7 @@ async def _open_gmail_compose_fields(session, player=None):
         'input[role="combobox"][aria-autocomplete="list"]',
     ), timeout_seconds=8.0)
     if to_field is None:
-        return page, None, "Gmail opened a compose window, but JARVIS could not locate the recipient field."
+        return page, None, "Gmail opened a compose window, but ARNOX could not locate the recipient field."
     return page, {"to": to_field, "subject": subject, "body": body}, ""
 
 
@@ -710,7 +713,7 @@ async def _gmail_web_prepare_once(session, draft: dict[str, str], player=None) -
             continue
         locator = await _first_visible(page, selectors, timeout_seconds=4.0)
         if locator is None:
-            return f"Gmail opened the draft, but JARVIS could not locate the {field_name} field. Nothing was sent."
+            return f"Gmail opened the draft, but ARNOX could not locate the {field_name} field. Nothing was sent."
         _compose_progress(player, field_name, draft[key])
         for recipient in [item.strip() for item in draft[key].split(",") if item.strip()]:
             try:
@@ -767,7 +770,7 @@ async def _gmail_web_prepare_async(session, draft: dict[str, str], player=None) 
             if attempt == 0:
                 await asyncio.sleep(0.4)
     return (
-        "Gmail interrupted the compose operation twice, so JARVIS discarded the incomplete draft. "
+        "Gmail interrupted the compose operation twice, so ARNOX discarded the incomplete draft. "
         f"Nothing was sent. Details: {last_error}"
     )
 
@@ -790,7 +793,7 @@ async def _gmail_web_send_async(session, draft: dict[str, str]) -> str:
     page = await session._get_page()
     await page.bring_to_front()
     if "mail.google.com" not in str(page.url or "").lower():
-        return "The Gmail draft is no longer the active JARVIS browser tab. Nothing was sent."
+        return "The Gmail draft is no longer the active ARNOX browser tab. Nothing was sent."
 
     subject = await _first_visible(page, (
         'input[name="subjectbox"]', 'input[aria-label="Subject"]', 'input[placeholder="Subject"]'
@@ -820,7 +823,7 @@ async def _gmail_web_send_async(session, draft: dict[str, str]) -> str:
         'button[aria-label^="Send" i]',
     ), timeout_seconds=5.0)
     if send_button is None:
-        return "JARVIS could not find Gmail's Send button. Nothing was sent."
+        return "ARNOX could not find Gmail's Send button. Nothing was sent."
     await send_button.click()
     try:
         await page.get_by_text(re.compile(r"message sent", re.I)).last.wait_for(state="visible", timeout=8_000)
@@ -893,7 +896,7 @@ def _mail_error(result: subprocess.CompletedProcess, operation: str) -> str:
     if "not authorized" in detail.lower() or "not permitted" in detail.lower():
         return (
             f"Email {operation} needs macOS Automation permission. "
-            "Allow JARVIS or Terminal to control Mail in System Settings > Privacy & Security > Automation."
+            "Allow ARNOX or Terminal to control Mail in System Settings > Privacy & Security > Automation."
         )
     return f"Email {operation} failed: {detail}"
 
@@ -1118,7 +1121,7 @@ def _prepare_email(params: dict, player=None) -> str:
     copies = (f"\nCc: {cc}" if cc else "") + (f"\nBcc: {bcc}" if bcc else "")
     return (
         "EMAIL_APPROVAL_REQUIRED|A pending email is ready. Nothing has been sent.\n"
-        + ("JARVIS opened Gmail and visibly typed this draft. It remains open for your review.\n" if provider == "gmail" else "")
+        + ("ARNOX opened Gmail and visibly typed this draft. It remains open for your review.\n" if provider == "gmail" else "")
         + f"Provider: {'Gmail' if provider == 'gmail' else 'Apple Mail' if provider == 'apple_mail' else 'Default mail app'}\n"
         f"To: {to}{copies}\nSubject: {subject}\n\n{preview}\n\n"
         "Ask the user to approve, revise, or cancel this exact email."
@@ -1200,6 +1203,185 @@ def _open_default_draft(draft: dict[str, str]) -> str:
         return f"Could not open the email draft: {exc}"
 
 
+_FOLDER_ALIASES = {
+    "inbox": "inbox", "sent": "sent", "drafts": "drafts", "draft": "drafts",
+    "spam": "spam", "trash": "trash", "bin": "trash", "starred": "starred",
+    "important": "important", "archive": "archive", "all": "all",
+}
+_DRAFT_HEADERS = ("To", "Cc", "Subject")
+
+
+def _gmail_labels() -> str:
+    try:
+        service = _gmail_service()
+        labels = service.users().labels().list(userId="me").execute().get("labels", []) or []
+        names = sorted(label.get("name", "") for label in labels if label.get("name"))
+        return "Gmail folders and labels:\n" + "\n".join(f"- {name}" for name in names)
+    except GmailConnectionError as exc:
+        return str(exc)
+    except Exception as exc:
+        return _gmail_api_error(exc, "label listing")
+
+
+def _gmail_folder(folder: str, limit: int) -> str:
+    key = _FOLDER_ALIASES.get(folder.lower().strip(), folder.strip())
+    if not key:
+        return "Tell me which folder to open."
+    query = "" if key == "all" else f"label:{key}" if key in set(_FOLDER_ALIASES.values()) else f'label:"{folder}"'
+    return _gmail_list(query, limit, f"Gmail folder '{folder}'")
+
+
+def _gmail_modify_message(message_id: str, add: tuple = (), remove: tuple = (), operation: str = "update") -> str:
+    try:
+        service = _gmail_service()
+        service.users().messages().modify(
+            userId="me", id=message_id,
+            body={"addLabelIds": list(add), "removeLabelIds": list(remove)},
+        ).execute()
+        return f"Gmail message {operation} done."
+    except GmailConnectionError as exc:
+        return str(exc)
+    except Exception as exc:
+        return _gmail_api_error(exc, operation)
+
+
+def _gmail_trash_message(message_id: str, restore: bool = False) -> str:
+    try:
+        service = _gmail_service()
+        messages = service.users().messages()
+        if restore:
+            messages.untrash(userId="me", id=message_id).execute()
+            return "Message restored from the trash."
+        messages.trash(userId="me", id=message_id).execute()
+        return "Message moved to the trash. It can be restored with action=untrash."
+    except GmailConnectionError as exc:
+        return str(exc)
+    except Exception as exc:
+        return _gmail_api_error(exc, "trash update")
+
+
+def _build_mime(params: dict) -> EmailMessage:
+    message = EmailMessage()
+    message["To"] = _normalize_recipients(params.get("to", ""))
+    if params.get("cc"):
+        message["Cc"] = _normalize_recipients(params.get("cc", ""))
+    if params.get("bcc"):
+        message["Bcc"] = _normalize_recipients(params.get("bcc", ""))
+    message["Subject"] = str(params.get("subject", "")).strip() or "(No subject)"
+    message.set_content(str(params.get("body", "")))
+    return message
+
+
+def _draft_raw(params: dict) -> dict:
+    raw = base64.urlsafe_b64encode(_build_mime(params).as_bytes()).decode("ascii")
+    return {"message": {"raw": raw}}
+
+
+def _gmail_draft_list(limit: int) -> str:
+    try:
+        service = _gmail_service()
+        result = service.users().drafts().list(userId="me", maxResults=limit).execute()
+        rows = []
+        for item in result.get("drafts", []) or []:
+            message = service.users().messages().get(
+                userId="me", id=item["message"]["id"], format="metadata",
+                metadataHeaders=["To", "Subject", "Date"],
+            ).execute()
+            headers = _headers_map(message.get("payload", {}))
+            rows.append({
+                "id": str(item.get("id", "")),
+                "sender": f"To: {headers.get('to', '(no recipient)')}",
+                "subject": headers.get("subject", "(No subject)"),
+                "date": headers.get("date", "Unknown date"),
+                "read": True,
+            })
+        return _format_rows(rows, "Gmail drafts") if rows else "There are no Gmail drafts."
+    except GmailConnectionError as exc:
+        return str(exc)
+    except Exception as exc:
+        return _gmail_api_error(exc, "draft listing")
+
+
+def _gmail_draft_create(params: dict) -> str:
+    if not str(params.get("to", "")).strip():
+        return "A recipient is required to create a draft."
+    try:
+        service = _gmail_service()
+        created = service.users().drafts().create(userId="me", body=_draft_raw(params)).execute()
+        return f"Draft saved in Gmail. Draft ID: {created.get('id', 'unknown')}. Nothing was sent."
+    except GmailConnectionError as exc:
+        return str(exc)
+    except Exception as exc:
+        return _gmail_api_error(exc, "draft creation")
+
+
+def _gmail_draft_update(params: dict) -> str:
+    draft_id = str(params.get("draft_id", "")).strip()
+    if not draft_id:
+        return "A draft ID from the draft list is required."
+    if not str(params.get("to", "")).strip():
+        return "A recipient is required to update a draft."
+    try:
+        service = _gmail_service()
+        service.users().drafts().update(userId="me", id=draft_id, body=_draft_raw(params)).execute()
+        return f"Draft {draft_id} updated. Nothing was sent."
+    except GmailConnectionError as exc:
+        return str(exc)
+    except Exception as exc:
+        return _gmail_api_error(exc, "draft update")
+
+
+def _gmail_draft_delete(draft_id: str) -> str:
+    if not draft_id.strip():
+        return "A draft ID from the draft list is required."
+    try:
+        service = _gmail_service()
+        service.users().drafts().delete(userId="me", id=draft_id.strip()).execute()
+        return "Draft deleted. Nothing was sent."
+    except GmailConnectionError as exc:
+        return str(exc)
+    except Exception as exc:
+        return _gmail_api_error(exc, "draft deletion")
+
+
+def _gmail_management(action: str, params: dict) -> str | None:
+    """Actions beyond read/send: labels, folders, trash, read state, stars, drafts.
+
+    Returns None when the action is not a management action.
+    """
+    message_id = str(params.get("message_id", "")).strip()
+    limit = _bounded_limit(params.get("limit", 10))
+    if action == "folders":
+        return _gmail_labels()
+    if action == "folder":
+        return _gmail_folder(str(params.get("folder", "")), limit)
+    if action in {"mark_read", "mark_unread", "star", "unstar", "archive"}:
+        if not message_id:
+            return "A message ID from the inbox or search results is required."
+        changes = {
+            "mark_read": ((), ("UNREAD",)),
+            "mark_unread": (("UNREAD",), ()),
+            "star": (("STARRED",), ()),
+            "unstar": ((), ("STARRED",)),
+            "archive": ((), ("INBOX",)),
+        }
+        add, remove = changes[action]
+        return _gmail_modify_message(message_id, add, remove, operation=action.replace("_", " "))
+    if action in {"trash", "untrash"}:
+        if not message_id:
+            return "A message ID from the inbox or search results is required."
+        return _gmail_trash_message(message_id, restore=action == "untrash")
+    if action == "draft_list":
+        return _gmail_draft_list(limit)
+    if action == "draft_create":
+        return _gmail_draft_create(params)
+    if action == "draft_update":
+        return _gmail_draft_update(params)
+    if action == "draft_delete":
+        return _gmail_draft_delete(str(params.get("draft_id", "")))
+    return None
+
+
 def email_control(parameters: dict | None = None, response=None, player=None, session_memory=None) -> str:
     params = parameters or {}
     action = str(params.get("action", "inbox")).lower().strip().replace("-", "_").replace(" ", "_")
@@ -1226,8 +1408,8 @@ def email_control(parameters: dict | None = None, response=None, player=None, se
     if action == "disconnect":
         _clear_gmail_credentials()
         return (
-            "The local Gmail connection was removed from JARVIS. To revoke Google-side access too, "
-            "remove JARVIS from your Google Account connections."
+            "The local Gmail connection was removed from ARNOX. To revoke Google-side access too, "
+            "remove ARNOX from your Google Account connections."
         )
     if action == "inbox":
         limit = _bounded_limit(params.get("limit", 10))
@@ -1289,7 +1471,12 @@ def email_control(parameters: dict | None = None, response=None, player=None, se
         if draft.get("delivery") == "gmail_web":
             return "Pending email cancelled. Nothing was sent. The visible Gmail draft may still be open."
         return "Pending email cancelled. Nothing was sent."
+    if provider == "gmail":
+        managed = _gmail_management(action, params)
+        if managed is not None:
+            return managed
     return (
         "Unknown email action. Available: connect, status, disconnect, inbox, unread, search, read, "
-        "prepare, approve, cancel."
+        "folders, folder, mark_read, mark_unread, star, unstar, archive, trash, untrash, "
+        "draft_list, draft_create, draft_update, draft_delete, prepare, approve, cancel."
     )

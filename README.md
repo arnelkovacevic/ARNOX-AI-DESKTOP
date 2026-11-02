@@ -1,15 +1,15 @@
-# JARVIS
+# ARNOX
 
 Local Gemini Live desktop assistant with a PyQt6 interface, voice interaction, detachable panels, and optional browser, file, screen, and messaging tools.
 
-JARVIS also includes a dedicated presentation studio that creates, edits,
+ARNOX also includes a dedicated presentation studio that creates, edits,
 redesigns, and extends editable widescreen `.pptx` decks from documents, data,
 images, audio, and video, with optional PDF export. See the
 [usage guide](docs/USAGE.md#6-powerpoint-presentations) for examples.
 
 ## Requirements
 
-You need **Python 3.11 or newer** installed to set up and run JARVIS. Confirm
+You need **Python 3.11 or newer** installed to set up and run ARNOX. Confirm
 your Python version before continuing:
 
 ```bash
@@ -28,7 +28,7 @@ python scripts/setup_jarvis.py
 
 On Windows, you can double-click `scripts/setup_jarvis.bat` instead.
 
-Open `.env`, add your `GEMINI_API_KEY`, then launch JARVIS:
+Open `.env`, add your `GEMINI_API_KEY`, then launch ARNOX:
 
 ```bash
 jarvis
@@ -37,7 +37,7 @@ jarvis
 You only need to run setup once. Activate `.venv` when opening a new terminal,
 then type `jarvis`.
 
-JARVIS's core UI, Gemini connection, presentations, research, files, and CLI are
+ARNOX's core UI, Gemini connection, presentations, research, files, and CLI are
 cross-platform. Some computer-control, email, media, and browser integrations
 depend on permissions and available applications on each operating system.
 
@@ -100,7 +100,7 @@ the one-time setup, install it for your user with:
 ./scripts/install_jarvis_cli.sh
 ```
 
-Open a new terminal (or reload your shell profile), then start JARVIS with:
+Open a new terminal (or reload your shell profile), then start ARNOX with:
 
 ```bash
 jarvis

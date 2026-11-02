@@ -4,7 +4,7 @@ cd /d "%~dp0.."
 python scripts\setup_jarvis.py
 if errorlevel 1 (
   echo.
-  echo JARVIS setup failed. Read the message above and try again.
+  echo ARNOX setup failed. Read the message above and try again.
   pause
   exit /b 1
 )

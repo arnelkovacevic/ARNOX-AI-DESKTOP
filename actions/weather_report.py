@@ -11,7 +11,7 @@ def weather_action(
     when     = parameters.get("time", "today")  
 
     if not city or not isinstance(city, str) or not city.strip():
-        msg = "Sir, the city is missing for the weather report."
+        msg = "The city is missing for the weather report."
         _log(msg, player)
         return msg
 
@@ -26,7 +26,7 @@ def weather_action(
         if not opened:
             raise RuntimeError("webbrowser.open returned False")
     except Exception as e:
-        msg = f"Sir, I couldn't open the browser for the weather report: {e}"
+        msg = f"I couldn't open the browser for the weather report: {e}"
         _log(msg, player)
         return msg
 
@@ -46,6 +46,6 @@ def _log(message: str, player=None) -> None:
     print(f"[Weather] {message}")
     if player:
         try:
-            player.write_log(f"JARVIS: {message}")
+            player.write_log(f"ARNOX: {message}")
         except Exception:
             pass

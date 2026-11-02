@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reusable staged QA runner for the complete JARVIS application."""
+"""Reusable staged QA runner for the complete ARNOX application."""
 
 from __future__ import annotations
 
@@ -27,9 +27,9 @@ LIVE_CASES = (
     ("Invalid then valid Gemini key", "Enter an invalid key, verify recovery, then validate the configured test key."),
     ("Selected voice and introduction", "Confirm the chosen voice is used for the introduction and normal conversation."),
     ("Subtitle and audio synchronization", "Confirm subtitles do not outrun speech and speech is not cut off when captions finish."),
-    ("Microphone turn-taking and interruption", "Speak, interrupt JARVIS, mute, and unmute. Confirm state and audio remain synchronized."),
+    ("Microphone turn-taking and interruption", "Speak, interrupt ARNOX, mute, and unmute. Confirm state and audio remain synchronized."),
     ("Gemini disconnect and reconnect", "Temporarily interrupt networking, restore it, and verify bounded reconnect behavior."),
-    ("Window and secondary display", "Move JARVIS between displays, resize to minimum, and confirm it never forces fullscreen."),
+    ("Window and secondary display", "Move ARNOX between displays, resize to minimum, and confirm it never forces fullscreen."),
     ("Themes, graphics, settings, compact mode", "Exercise every theme and graphics profile, Auto mode, settings, dock panels, and compact mode."),
     ("Keyboard and focus accessibility", "Navigate startup, API setup, settings, dock, and text input without a mouse. Confirm visible focus."),
     ("Controlled browser page", "With browser opt-in enabled, use only a localhost test page for navigate, click, type, and read actions."),
@@ -160,7 +160,7 @@ def automated(_args) -> int:
         "Anti-Patterns": {"score": 3, "finding": "The interface is distinctive and task-oriented; some control vocabulary remains inconsistent."},
         "total": 12,
         "rating": "Acceptable (significant work needed)",
-        "anti_pattern_verdict": "Pass with reservations: distinctive JARVIS identity, not a generic generated dashboard.",
+        "anti_pattern_verdict": "Pass with reservations: distinctive ARNOX identity, not a generic generated dashboard.",
     }
     for check in report.checks:
         if check.status == "failed":
@@ -226,8 +226,8 @@ def live(args) -> int:
     directory = _artifact_dir(report)
     workspace = directory / "workspace"
     workspace.mkdir(parents=True, exist_ok=True)
-    print("JARVIS supervised QA")
-    print(f"Set these before launching JARVIS in another terminal:\nJARVIS_QA_MODE=1\nJARVIS_QA_WORKSPACE={workspace}")
+    print("ARNOX supervised QA")
+    print(f"Set these before launching ARNOX in another terminal:\nJARVIS_QA_MODE=1\nJARVIS_QA_WORKSPACE={workspace}")
     print("Dangerous actions and real message sends remain blocked.")
     for name, instructions in LIVE_CASES:
         case = _answer_case(name, instructions)
@@ -328,12 +328,12 @@ def report_command(_args) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run staged, side-effect-safe JARVIS QA.")
+    parser = argparse.ArgumentParser(description="Run staged, side-effect-safe ARNOX QA.")
     subparsers = parser.add_subparsers(dest="command", required=True)
     automated_parser = subparsers.add_parser("automated", help="Run safe automated checks and generate a report.")
     automated_parser.set_defaults(func=automated)
     live_parser = subparsers.add_parser("live", help="Record the supervised macOS checklist.")
-    live_parser.add_argument("--pid", type=int, help="Running JARVIS PID to monitor during the soak test.")
+    live_parser.add_argument("--pid", type=int, help="Running ARNOX PID to monitor during the soak test.")
     live_parser.add_argument("--soak-minutes", type=float, default=0.0)
     live_parser.set_defaults(func=live)
     checklist_parser = subparsers.add_parser(

@@ -161,7 +161,7 @@ create_presentation
   template_file: string (optional)
   model_source_file: string (optional; PPTX used only to borrow embedded native 3D models)
   use_native_3d: boolean (optional; set true when the user asks to use PowerPoint 3D models)
-  three_d_mode: "ask" | "yes" | "no" (optional; omit or ask initially so JARVIS can request the user's preference)
+  three_d_mode: "ask" | "yes" | "no" (optional; omit or ask initially so ARNOX can request the user's preference)
   quality: "fast" | "quality" | "premium" (optional)
   allow_web_research: boolean (optional, default: false)
   export_pdf: boolean (optional, default: true)

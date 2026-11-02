@@ -42,7 +42,7 @@ class UISubmitTests(unittest.TestCase):
             raise RuntimeError("routing failed")
 
         window = self._window_stub(callback)
-        ui.MainWindow._send(window, "Hello JARVIS")
+        ui.MainWindow._send(window, "Hello ARNOX")
         self.assertTrue(done.wait(1.0))
         for _ in range(100):
             if window._log_sig.emit.called:

@@ -1,4 +1,4 @@
-"""Cross-platform one-time JARVIS setup (Windows, macOS, Linux)."""
+"""Cross-platform one-time ARNOX setup (Windows, macOS, Linux)."""
 from __future__ import annotations
 
 import os
@@ -18,7 +18,7 @@ def run(*args: str) -> None:
 
 
 def main() -> int:
-    print("JARVIS setup — Windows / macOS / Linux")
+    print("ARNOX setup — Windows / macOS / Linux")
     if shutil.which("python3"):
         host_python = "python3"
     elif shutil.which("python"):

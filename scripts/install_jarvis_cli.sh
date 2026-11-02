@@ -20,7 +20,7 @@ elif [ "$(basename "${SHELL:-}")" = "bash" ]; then
   PROFILE="$HOME/.bash_profile"
 fi
 if [ -n "$PROFILE" ] && ! grep -Fq 'JARVIS_INSTALL_DIR' "$PROFILE" 2>/dev/null; then
-  if ! printf '\n# JARVIS CLI\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$PROFILE" 2>/dev/null; then
+  if ! printf '\n# ARNOX CLI\nexport PATH="$HOME/.local/bin:$PATH"\n' >> "$PROFILE" 2>/dev/null; then
     echo "Could not update $PROFILE automatically; add $INSTALL_DIR to PATH manually."
   fi
 fi
@@ -29,4 +29,4 @@ echo "Installed: $INSTALL_DIR/jarvis"
 if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
   echo "Open a new terminal, or run: export PATH=\"$INSTALL_DIR:\$PATH\""
 fi
-echo "Then launch JARVIS with: jarvis"
+echo "Then launch ARNOX with: jarvis"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Non-interactive, side-effect-safe probes for the JARVIS live checklist."""
+"""Non-interactive, side-effect-safe probes for the ARNOX live checklist."""
 
 from __future__ import annotations
 
@@ -121,7 +121,7 @@ def _screen_permission_probe() -> tuple[bool | None, dict, str]:
 
 class _LocalHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        body = b"<html><title>JARVIS QA</title><button id='qa'>Ready</button></html>"
+        body = b"<html><title>ARNOX QA</title><button id='qa'>Ready</button></html>"
         self.send_response(200)
         self.send_header("Content-Type", "text/html")
         self.send_header("Content-Length", str(len(body)))
@@ -159,7 +159,7 @@ def _browser_probe() -> tuple[bool | None, dict, str]:
         evidence = {"url": browser_control._normalize_url(url), "local_http": local_ok}
         try:
             evidence.update(asyncio.run(_playwright_local(url)))
-            return evidence.get("title") == "JARVIS QA", evidence, "Headless Chromium navigated only to the local QA page."
+            return evidence.get("title") == "ARNOX QA", evidence, "Headless Chromium navigated only to the local QA page."
         except Exception as exc:
             evidence["playwright_error"] = str(exc)[:300]
             return None, evidence, "Local page worked, but the Playwright Chromium binary is unavailable."
@@ -174,7 +174,7 @@ def _file_probe(workspace: Path) -> tuple[bool, dict, str]:
     copied = root / "copies"
     copied.mkdir(exist_ok=True)
     with patch.object(file_controller, "_SAFE_ROOTS", [root]):
-        created = file_controller.create_file(str(root), "qa.txt", "JARVIS QA")
+        created = file_controller.create_file(str(root), "qa.txt", "ARNOX QA")
         read = file_controller.read_file(str(root), "qa.txt")
         renamed = file_controller.rename_file(str(root), "qa.txt", "qa-renamed.txt")
         copied_result = file_controller.copy_file(
@@ -184,7 +184,7 @@ def _file_probe(workspace: Path) -> tuple[bool, dict, str]:
         listing = file_controller.list_files(str(root))
     passed = all((
         "File saved" in created,
-        "JARVIS QA" in read,
+        "ARNOX QA" in read,
         "Renamed" in renamed,
         "Copied" in copied_result,
         "Access denied" in outside,
@@ -233,7 +233,7 @@ def _stability_probe(seconds: float) -> tuple[bool, dict, str]:
         "samples": samples,
         "rss_growth_mb": growth_mb,
         "thread_growth": thread_growth,
-    }, "Short harness stability probe completed; the 30-minute real JARVIS soak remains optional."
+    }, "Short harness stability probe completed; the 30-minute real ARNOX soak remains optional."
 
 
 def main() -> int:

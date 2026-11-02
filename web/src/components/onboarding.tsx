@@ -31,7 +31,7 @@ export function Onboarding({ user, onComplete, onSignOut }: { user: User; onComp
   return (
     <main className="onboarding-shell">
       <header className="onboarding-header">
-        <div className="wordmark"><span className="wordmark-mark">J</span> JARVIS</div>
+        <div className="wordmark"><span className="wordmark-mark">J</span> ARNOX</div>
         <button className="text-button" onClick={onSignOut}>Use another account</button>
       </header>
       <section className="onboarding-sequence">
@@ -45,7 +45,7 @@ export function Onboarding({ user, onComplete, onSignOut }: { user: User; onComp
           <KeyRound className="stage-icon" size={28} />
           <h1>Connect your intelligence layer.</h1>
           <p>
-            JARVIS uses your Gemini API key for live voice and reasoning. The key is encrypted at rest and never returned to the browser.
+            ARNOX uses your Gemini API key for live voice and reasoning. The key is encrypted at rest and never returned to the browser.
           </p>
           <form onSubmit={submit} className="key-form">
             <label>Gemini API key<Input name="api_key" type="password" autoComplete="off" required minLength={20} placeholder="Paste the key from Google AI Studio" /></label>

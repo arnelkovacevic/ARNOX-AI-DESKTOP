@@ -1,4 +1,4 @@
-# JARVIS Quality Assurance
+# ARNOX Quality Assurance
 
 The QA system has two stages. Automated checks are always run first. Supervised checks then exercise real macOS audio, permissions, displays, and integrations while QA safety rules remain active.
 
@@ -34,7 +34,7 @@ Start the checklist:
 python3 scripts/qa.py live
 ```
 
-The runner prints a unique QA workspace. In another terminal, launch JARVIS with the two environment values it displays. Record pass, fail, blocked, or skipped for each case.
+The runner prints a unique QA workspace. In another terminal, launch ARNOX with the two environment values it displays. Record pass, fail, blocked, or skipped for each case.
 
 Optional supervised capabilities must be enabled individually:
 
@@ -48,7 +48,7 @@ JARVIS_QA_ALLOW_MEMORY=1
 
 Real message sending, computer shutdown/restart, connectivity changes, game installation/update, and file writes outside the QA workspace remain blocked even when optional capabilities are enabled.
 
-To collect a 30-minute stability sample from a running JARVIS process:
+To collect a 30-minute stability sample from a running ARNOX process:
 
 ```bash
 python3 scripts/qa.py live --pid JARVIS_PID --soak-minutes 30

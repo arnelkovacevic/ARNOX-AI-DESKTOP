@@ -85,7 +85,7 @@ class TTSEngine:
 
     Usage:
         engine = TTSEngine(provider="openai", api_key="...", voice_id="onyx")
-        engine.speak("Hello, Sir.")
+        engine.speak("Hello.")
     """
 
     def __init__(

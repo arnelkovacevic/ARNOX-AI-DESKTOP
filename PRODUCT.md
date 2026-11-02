@@ -6,11 +6,11 @@ product
 
 ## Users
 
-The primary user is a desktop operator who uses JARVIS frequently through both spoken conversation and typed chat. They expect the assistant to feel present, capable, and responsive while still supporting practical repeated workflows such as research, system control, messaging, files, reminders, and coding assistance.
+The primary user is a desktop operator who uses ARNOX frequently through both spoken conversation and typed chat. They expect the assistant to feel present, capable, and responsive while still supporting practical repeated workflows such as research, system control, messaging, files, reminders, and coding assistance.
 
 ## Product Purpose
 
-JARVIS is a personal desktop AI operator that combines conversation, computer awareness, tools, and automation in one persistent interface. Success means the user immediately understands what JARVIS can do, can complete setup confidently, and can operate it through either voice or text without the interface getting in the way.
+ARNOX is a personal desktop AI operator that combines conversation, computer awareness, tools, and automation in one persistent interface. Success means the user immediately understands what ARNOX can do, can complete setup confidently, and can operate it through either voice or text without the interface getting in the way.
 
 ## Brand Personality
 

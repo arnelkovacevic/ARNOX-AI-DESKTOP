@@ -42,7 +42,7 @@ export default function Home() {
   }
 
   if (view === "loading") {
-    return <div className="boot-screen"><div className="boot-pulse" aria-label="Initializing JARVIS" /></div>;
+    return <div className="boot-screen"><div className="boot-pulse" aria-label="Initializing ARNOX" /></div>;
   }
   if (view === "auth") return <AuthScreen onSession={handleSession} />;
   if (view === "onboarding" && user) {

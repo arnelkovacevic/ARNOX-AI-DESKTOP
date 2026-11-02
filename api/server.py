@@ -101,7 +101,7 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(
-    title="JARVIS Cloud API",
+    title="ARNOX Cloud API",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -216,7 +216,7 @@ async def chat(
     await limiter.consume(user.id, "chat", 30, 60)
     api_key = get_user_secret(db, user.id, "gemini_api_key")
     if not api_key:
-        raise HTTPException(status_code=409, detail="Add a Gemini API key before starting JARVIS")
+        raise HTTPException(status_code=409, detail="Add a Gemini API key before starting ARNOX")
 
     with tenant_scope(user.id):
         history = recent_chat_messages(user.id, limit=12)
@@ -270,7 +270,7 @@ async def live_socket(websocket: WebSocket) -> None:
         await websocket.send_json({
             "type": "error",
             "code": "gemini_key_required",
-            "message": "Add a Gemini API key before starting JARVIS.",
+            "message": "Add a Gemini API key before starting ARNOX.",
         })
         await websocket.close(code=4403)
         return

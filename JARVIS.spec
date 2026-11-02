@@ -21,7 +21,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='JARVIS',
+    name='ARNOX',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -40,7 +40,7 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='JARVIS',
+    name='ARNOX',
 )
 app = BUNDLE(
     coll,

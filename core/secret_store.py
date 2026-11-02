@@ -45,7 +45,7 @@ class KeyringSecretStore(SecretStore):
         try:
             return self._keyring.get_password(self.service, key)
         except Exception:
-            # A locked/unavailable macOS Keychain must not abort JARVIS boot.
+            # A locked/unavailable macOS Keychain must not abort ARNOX boot.
             # Setup remains available so the user can validate a session key.
             return None
 

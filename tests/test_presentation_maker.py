@@ -290,10 +290,10 @@ class PresentationMakerTests(unittest.TestCase):
 
             model_slides = []
             for slide in deck.slides:
-                models = [shape for shape in slide.shapes if shape.name.startswith("!!JARVIS 3D")]
+                models = [shape for shape in slide.shapes if shape.name.startswith("!!ARNOX 3D")]
                 if models:
                     model_slides.append(slide)
-                    posters = [shape for shape in slide.shapes if shape.name.startswith("!!JARVIS 3D Poster")]
+                    posters = [shape for shape in slide.shapes if shape.name.startswith("!!ARNOX 3D Poster")]
                     text_shapes = [
                         shape for shape in slide.shapes
                         if hasattr(shape, "text") and shape.text.strip()

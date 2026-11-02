@@ -643,7 +643,7 @@ Return ONLY a valid JSON object:
 
 Rules:
 - Pick the single best matching action from the available list.
-- If the user says to shut down, restart, reboot, close, quit, exit, or stop JARVIS, do not choose shutdown or restart.
+- If the user says to shut down, restart, reboot, close, quit, exit, or stop ARNOX, do not choose shutdown or restart.
 - Choose shutdown/restart only when the user clearly asks to power off or restart the computer/system/Mac/PC.
 - For volume_set: value is an integer 0-100.
 - For type_text: value is the exact text to type.
@@ -686,7 +686,7 @@ def computer_settings(
         return "No action could be determined."
 
     if _is_jarvis_self_shutdown_request(params, action, description, value):
-        return "JARVIS self-shutdown is disabled. No computer shutdown was performed."
+        return "ARNOX self-shutdown is disabled. No computer shutdown was performed."
 
     print(f"[Settings] Action: {action}  Value: {value}  OS: {_OS}")
     if player:

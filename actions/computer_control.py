@@ -221,7 +221,7 @@ def _screenshot(save_path: str | None = None) -> str:
     path = _safe_screenshot_path(save_path)
     img  = pyautogui.screenshot()
     img.save(str(path))
-    mark_created_file(path, "Screenshot captured by JARVIS computer_control.")
+    mark_created_file(path, "Screenshot captured by ARNOX computer_control.")
     return f"Screenshot saved: {path}"
 
 

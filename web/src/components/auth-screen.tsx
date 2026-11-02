@@ -36,7 +36,7 @@ export function AuthScreen({ onSession }: { onSession: (session: Session) => voi
   return (
     <main className="entry-shell">
       <section className="entry-identity" aria-labelledby="entry-title">
-        <div className="wordmark"><span className="wordmark-mark">J</span> JARVIS</div>
+        <div className="wordmark"><span className="wordmark-mark">J</span> ARNOX</div>
         <div className="entry-reactor" aria-hidden="true"><span /></div>
         <p className="eyebrow">Personal intelligence system</p>
         <h1 id="entry-title">Command without friction.</h1>
@@ -57,13 +57,13 @@ export function AuthScreen({ onSession }: { onSession: (session: Session) => voi
         </div>
         <form onSubmit={submit} className="auth-form">
           {mode === "signup" && (
-            <label>Display name<Input name="display_name" autoComplete="name" required placeholder="How JARVIS should address you" /></label>
+            <label>Display name<Input name="display_name" autoComplete="name" required placeholder="How ARNOX should address you" /></label>
           )}
           <label>Email<Input name="email" type="email" autoComplete="email" required placeholder="operator@example.com" /></label>
           <label>Password<Input name="password" type="password" minLength={10} autoComplete={mode === "login" ? "current-password" : "new-password"} required placeholder="At least 10 characters" /></label>
           {error && <p className="form-error" role="alert">{error}</p>}
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Authorizing" : mode === "login" ? "Enter JARVIS" : "Create secure account"}
+            {pending ? "Authorizing" : mode === "login" ? "Enter ARNOX" : "Create secure account"}
             {!pending && <ArrowRight size={16} />}
           </Button>
         </form>

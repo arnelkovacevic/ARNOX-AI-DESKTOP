@@ -42,6 +42,7 @@ weather_action = _lazy_action("actions.weather_report", "weather_action")
 send_message = _lazy_action("actions.send_message", "send_message")
 prepare_message_reply = _lazy_action("actions.send_message", "prepare_message_reply")
 email_control = _lazy_action("actions.email_control", "email_control")
+calendar_control = _lazy_action("actions.calendar_control", "calendar_control")
 check_messages = _lazy_action("actions.message_monitor", "check_messages")
 reminder = _lazy_action("actions.reminder", "reminder")
 computer_settings = _lazy_action("actions.computer_settings", "computer_settings")
@@ -96,16 +97,16 @@ STARTUP_CLAPS_REQUIRED = 2
 STARTUP_CLAP_MAX_GAP_SECONDS = 4.0
 STARTUP_CLAP_COOLDOWN_SECONDS = 0.22
 SELF_QUIT_GOODBYE = (
-    "Certainly, sir. It has been a privilege. JARVIS is going offline now. "
+    "Certainly, sir. It has been a privilege. ARNOX is going offline now. "
     "Until next time."
 )
 
 _SELF_QUIT_PATTERNS = tuple(re.compile(pattern, re.IGNORECASE) for pattern in (
-    r"\b(?:quit|close|exit)\s+(?:jarvis|yourself)\b",
-    r"\b(?:shut|turn)\s+(?:jarvis|yourself)\s+(?:down|off)\b",
-    r"\b(?:shut\s+down|turn\s+off|power\s+down)\s+(?:jarvis|yourself)\b",
-    r"\bjarvis\b.{0,36}\b(?:quit|close|exit|shut\s+down|turn\s+off|go\s+offline)\b",
-    r"\b(?:go|take\s+yourself)\s+offline(?:\s+jarvis)?\b",
+    r"\b(?:quit|close|exit)\s+(?:jarvis|arnox|yourself)\b",
+    r"\b(?:shut|turn)\s+(?:jarvis|arnox|yourself)\s+(?:down|off)\b",
+    r"\b(?:shut\s+down|turn\s+off|power\s+down)\s+(?:jarvis|arnox|yourself)\b",
+    r"\b(?:jarvis|arnox)\b.{0,36}\b(?:quit|close|exit|shut\s+down|turn\s+off|go\s+offline)\b",
+    r"\b(?:go|take\s+yourself)\s+offline(?:\s+(?:jarvis|arnox))?\b",
 ))
 
 
@@ -165,14 +166,14 @@ def wait_for_startup_claps(
 ) -> bool:
     """Hold startup until two distinct claps are heard by the default microphone."""
     if os.environ.get("JARVIS_SKIP_CLAP_GATE", "").strip().lower() in {"1", "true", "yes", "on"}:
-        print("[JARVIS] 👏 Startup clap gate bypassed (JARVIS_SKIP_CLAP_GATE).")
+        print("[ARNOX] 👏 Startup clap gate bypassed (JARVIS_SKIP_CLAP_GATE).")
         return True
     # Some macOS/AUHAL configurations expose a nominal input device but reject
     # every PortAudio operation (PaErrorCode -9986). Avoid repeatedly starting
     # a failing Core Audio stream; users with a working mic can opt in.
     if sys.platform == "darwin" and stream_factory is None and os.environ.get("JARVIS_ENABLE_CLAP_GATE", "").strip().lower() not in {"1", "true", "yes", "on"}:
-        print("[JARVIS] ⚠️ macOS microphone gate disabled for this audio configuration.")
-        print("[JARVIS] Continuing without clap startup. Set JARVIS_ENABLE_CLAP_GATE=1 to force it.")
+        print("[ARNOX] ⚠️ macOS microphone gate disabled for this audio configuration.")
+        print("[ARNOX] Continuing without clap startup. Set JARVIS_ENABLE_CLAP_GATE=1 to force it.")
         return True
 
     required = max(1, int(required))
@@ -180,7 +181,7 @@ def wait_for_startup_claps(
     try:
         import numpy as np
     except ImportError:
-        print("[JARVIS] ❌ Startup clap gate needs numpy. Set JARVIS_SKIP_CLAP_GATE=1 to bypass.")
+        print("[ARNOX] ❌ Startup clap gate needs numpy. Set JARVIS_SKIP_CLAP_GATE=1 to bypass.")
         return False
 
     clap_times: list[float] = []
@@ -196,7 +197,7 @@ def wait_for_startup_claps(
     def callback(indata, frames, time_info, status):
         nonlocal last_clap_at, noise_floor, clap_times
         if status:
-            print(f"[JARVIS] ⚠️ Clap mic: {status}")
+            print(f"[ARNOX] ⚠️ Clap mic: {status}")
         samples = np.asarray(indata, dtype=np.float32).reshape(-1)
         if samples.size == 0:
             return
@@ -227,11 +228,11 @@ def wait_for_startup_claps(
             clap_times = []
         clap_times.append(now)
         last_clap_at = now
-        print(f"[JARVIS] 👏 Clap {len(clap_times)}/{required} detected")
+        print(f"[ARNOX] 👏 Clap {len(clap_times)}/{required} detected")
         if len(clap_times) >= required:
             finished.set()
 
-    print(f"[JARVIS] 👏 Waiting for {required} claps to power up...")
+    print(f"[ARNOX] 👏 Waiting for {required} claps to power up...")
     # PortAudio on macOS commonly rejects 16 kHz even when the microphone is
     # available (PaErrorCode -9986). Prefer the device's native rate, then
     # retry standard rates before reporting that the microphone is unavailable.
@@ -246,9 +247,9 @@ def wait_for_startup_claps(
                 except (TypeError, IndexError, ValueError):
                     input_index = -1
                 if input_index < 0:
-                    print("[JARVIS] ⚠️ macOS reports no default microphone device.")
+                    print("[ARNOX] ⚠️ macOS reports no default microphone device.")
                     if os.environ.get("JARVIS_REQUIRE_CLAP_GATE", "").strip().lower() not in {"1", "true", "yes", "on"}:
-                        print("[JARVIS] ⚠️ Continuing without the clap gate; microphone input is unavailable.")
+                        print("[ARNOX] ⚠️ Continuing without the clap gate; microphone input is unavailable.")
                         return True
                     raise RuntimeError("no default microphone device")
                 input_device = input_index
@@ -285,7 +286,7 @@ def wait_for_startup_claps(
                 ):
                     while not finished.wait(0.05):
                         if timeout is not None and time.monotonic() - started_at >= timeout:
-                            print("[JARVIS] ⏱️ Startup clap gate timed out.")
+                            print("[ARNOX] ⏱️ Startup clap gate timed out.")
                             return False
                 break
             except Exception as exc:
@@ -295,18 +296,18 @@ def wait_for_startup_claps(
         else:
             raise last_error or RuntimeError("no compatible microphone sample rate")
     except KeyboardInterrupt:
-        print("\n[JARVIS] Startup cancelled.")
+        print("\n[ARNOX] Startup cancelled.")
         return False
     except Exception as exc:
-        print(f"[JARVIS] ❌ Startup clap microphone unavailable: {exc}")
+        print(f"[ARNOX] ❌ Startup clap microphone unavailable: {exc}")
         if os.environ.get("JARVIS_REQUIRE_CLAP_GATE", "").strip().lower() not in {"1", "true", "yes", "on"}:
-            print("[JARVIS] ⚠️ Continuing without the clap gate; microphone input is unavailable.")
-            print("[JARVIS] Restore microphone access to use voice input.")
+            print("[ARNOX] ⚠️ Continuing without the clap gate; microphone input is unavailable.")
+            print("[ARNOX] Restore microphone access to use voice input.")
             return True
-        print("[JARVIS] Clap gate required. Set JARVIS_SKIP_CLAP_GATE=1 to bypass it.")
+        print("[ARNOX] Clap gate required. Set JARVIS_SKIP_CLAP_GATE=1 to bypass it.")
         return False
 
-    print("[JARVIS] ⚡ Two claps detected. Powering up...")
+    print("[ARNOX] ⚡ Two claps detected. Powering up...")
     return True
 
 def _get_api_key() -> str:
@@ -349,14 +350,15 @@ def _load_system_prompt() -> str:
         prompt = PROMPT_PATH.read_text(encoding="utf-8").strip()
         return (
             prompt
-            + "\n\nAlways address the user respectfully as 'Sir' or 'Madam' where appropriate, while remaining efficient and direct."
+            + "\n\nAddress the user by the name stored in memory when one is known. Never use titles like Sir or Madam unless the user asks for them. Stay efficient and direct."
         )
     except Exception:
         return (
-            "You are JARVIS, Tony Stark's AI assistant. "
+            "You are ARNOX, a personal AI desktop assistant. Your name is ARNOX, not JARVIS. "
+            "Always introduce and refer to yourself as ARNOX. "
             "Be concise, direct, and always use the provided tools to complete tasks. "
             "Never simulate or guess results — always call the appropriate tool. "
-            "Always address the user respectfully as 'Sir' or 'Madam' where appropriate, while remaining efficient and direct."
+            "Address the user by the name stored in memory when one is known. Never use titles like Sir or Madam unless the user asks for them. Stay efficient and direct."
         )
 
 _CTRL_RE = re.compile(r"<ctrl\d+>", re.IGNORECASE)
@@ -475,7 +477,7 @@ TOOL_DECLARATIONS = [
             "properties": {
                 "action": {
                     "type": "STRING",
-                    "enum": ["connect", "status", "disconnect", "inbox", "unread", "search", "read", "prepare", "approve", "cancel"],
+                    "enum": ["connect", "status", "disconnect", "inbox", "unread", "search", "read", "prepare", "approve", "cancel", "folders", "folder", "mark_read", "mark_unread", "star", "unstar", "archive", "trash", "untrash", "draft_list", "draft_create", "draft_update", "draft_delete"],
                     "description": "Email operation."
                 },
                 "provider": {
@@ -498,7 +500,33 @@ TOOL_DECLARATIONS = [
                 "cc": {"type": "STRING", "description": "Optional Cc addresses."},
                 "bcc": {"type": "STRING", "description": "Optional Bcc addresses."},
                 "subject": {"type": "STRING", "description": "Exact email subject for prepare."},
-                "body": {"type": "STRING", "description": "Exact email body for prepare."}
+                "body": {"type": "STRING", "description": "Exact email body for prepare."},
+                "folder": {"type": "STRING", "description": "Folder or label name for action=folder, e.g. inbox, sent, drafts, trash, or a custom label."},
+                "draft_id": {"type": "STRING", "description": "Draft ID from draft_list, for draft_update and draft_delete."}
+            },
+            "required": ["action"]
+        }
+    },
+    {
+        "name": "calendar_control",
+        "description": (
+            "Reads and edits Google Calendar using the same Google connection as Gmail. "
+            "agenda lists upcoming events, create adds an event, update changes an event, delete removes one. "
+            "delete requires confirmed=true, so ask the user to confirm the exact event first."
+        ),
+        "parameters": {
+            "type": "OBJECT",
+            "properties": {
+                "action": {"type": "STRING", "enum": ["agenda", "create", "update", "delete"], "description": "Calendar operation."},
+                "days": {"type": "INTEGER", "description": "For agenda: how many days ahead, 1-60. Default 7."},
+                "limit": {"type": "INTEGER", "description": "For agenda: maximum events, 1-30."},
+                "event_id": {"type": "STRING", "description": "Event ID from agenda, required for update and delete."},
+                "summary": {"type": "STRING", "description": "Event title."},
+                "start": {"type": "STRING", "description": "ISO 8601 start, e.g. 2026-11-05T14:00. Date only for all-day events."},
+                "end": {"type": "STRING", "description": "ISO 8601 end. Default: one hour after start."},
+                "location": {"type": "STRING", "description": "Optional location."},
+                "description": {"type": "STRING", "description": "Optional event notes."},
+                "confirmed": {"type": "BOOLEAN", "description": "Must be true to delete an event, only after the user confirmed."}
             },
             "required": ["action"]
         }
@@ -775,7 +803,7 @@ TOOL_DECLARATIONS = [
     },
     {
         "name": "graphics_quality",
-        "description": "Changes JARVIS rendering quality between low, medium, and high.",
+        "description": "Changes ARNOX rendering quality between low, medium, and high.",
         "parameters": {
             "type": "OBJECT",
             "properties": {
@@ -791,7 +819,7 @@ TOOL_DECLARATIONS = [
     {
         "name": "jarvis_ui_control",
         "description": (
-            "Changes JARVIS's own interface. Use when the user asks to open or close the Command Center, "
+            "Changes ARNOX's own interface. Use when the user asks to open or close the Command Center, "
             "change the theme or graphics quality, open settings, enter compact mode, toggle fullscreen, or show shortcuts."
         ),
         "parameters": {
@@ -911,7 +939,7 @@ TOOL_DECLARATIONS = [
                 "appearance": {
                     "type": "STRING",
                     "enum": ["auto", "light", "dark"],
-                    "description": "Overall slide appearance. Honor light or dark when requested; auto uses the restrained dark JARVIS style."
+                    "description": "Overall slide appearance. Honor light or dark when requested; auto uses the restrained dark ARNOX style."
                 },
                 "transition": {
                     "type": "STRING",
@@ -1198,7 +1226,7 @@ class JarvisLive:
         ):
             self._queue_self_quit_after_farewell()
             outgoing_text = (
-                "[VERIFIED LOCAL SELF-SHUTDOWN] The user explicitly asked JARVIS to quit. "
+                "[VERIFIED LOCAL SELF-SHUTDOWN] The user explicitly asked ARNOX to quit. "
                 f'Say exactly: "{SELF_QUIT_GOODBYE}" Do not call a tool and say nothing else.'
             )
         await self.session.send_client_content(
@@ -1242,7 +1270,7 @@ class JarvisLive:
             return False
 
     def _speak_vision_result(self, text: str) -> bool:
-        """Send finished vision text through JARVIS's active voice session."""
+        """Send finished vision text through ARNOX's active voice session."""
         result = " ".join(str(text or "").split())
         if not result:
             return False
@@ -1256,11 +1284,11 @@ class JarvisLive:
     def speak_error(self, tool_name: str, error: str):
         short = str(error)[:120]
         self.ui.write_log(f"ERR: {tool_name} — {short}")
-        self.speak(f"Sir, {tool_name} encountered an error. {short}")
+        self.speak(f"{tool_name} encountered an error. {short}")
 
     @staticmethod
     def _is_explicit_self_quit_transcript(text: str) -> bool:
-        """Only match commands that clearly target JARVIS, never the computer."""
+        """Only match commands that clearly target ARNOX, never the computer."""
         normalized = " ".join(str(text or "").lower().split())
         if not normalized:
             return False
@@ -1270,7 +1298,7 @@ class JarvisLive:
             return False
         if normalized in {
             "quit", "exit", "shutdown", "shut down", "turn off", "power down",
-            "go offline", "goodbye jarvis", "goodbye jarvis please",
+            "go offline", "goodbye jarvis", "goodbye jarvis please", "goodbye arnox", "goodbye arnox please",
         }:
             return True
         return any(pattern.search(normalized) for pattern in _SELF_QUIT_PATTERNS)
@@ -1280,7 +1308,7 @@ class JarvisLive:
         self._pending_self_quit = True
         self._pending_self_quit_farewell_received = False
         try:
-            self.ui.write_log("SYS: Shutdown queued; waiting for JARVIS's farewell.")
+            self.ui.write_log("SYS: Shutdown queued; waiting for ARNOX's farewell.")
         except Exception:
             pass
         # A voice model can occasionally omit audio/turn_complete. Do not
@@ -1317,7 +1345,7 @@ class JarvisLive:
             self._self_quit_timer.cancel()
             self._self_quit_timer = None
         self.request_shutdown()
-        self.ui.handle_ui_command("Quit JARVIS")
+        self.ui.handle_ui_command("Quit ARNOX")
         return True
 
     def request_shutdown(self) -> None:
@@ -1338,7 +1366,7 @@ class JarvisLive:
             if out_queue is not None:
                 out_queue.put_nowait(None)
         except Exception as exc:
-            print(f"[JARVIS] ⚠️ Shutdown session close failed: {exc}")
+            print(f"[ARNOX] ⚠️ Shutdown session close failed: {exc}")
 
     def set_tour_active(self, active: bool) -> None:
         """Track whether the desktop introduction temporarily owns the UI."""
@@ -1367,7 +1395,7 @@ class JarvisLive:
                 transcript = str(getattr(self, "_last_input_transcript", "") or "")
 
         if not self._is_explicit_self_quit_transcript(transcript):
-            return "Ignored an unverified shutdown request. JARVIS remains online."
+            return "Ignored an unverified shutdown request. ARNOX remains online."
 
         self._queue_self_quit_after_farewell()
         return f'Shutdown queued. Say exactly: "{SELF_QUIT_GOODBYE}"'
@@ -1383,7 +1411,7 @@ class JarvisLive:
             try:
                 asyncio.run_coroutine_threadsafe(self.session.close(), self._loop)
             except Exception as e:
-                print(f"[JARVIS] ⚠️ Could not close session after voice change: {e}")
+                print(f"[ARNOX] ⚠️ Could not close session after voice change: {e}")
 
     def _get_current_voice(self) -> str:
         if getattr(self, "voice_name", None):
@@ -1410,15 +1438,15 @@ class JarvisLive:
             elif isinstance(name_entry, str):
                 name = name_entry
             if name:
-                greeting = f"Jarvis. At your service, {name}. What would you like to accomplish today?"
+                greeting = f"Arnox. At your service, {name}. What would you like to accomplish today?"
             else:
-                greeting = "Jarvis. At your service, Sir or Madam. What would you like to accomplish today?"
+                greeting = "Arnox. At your service. What would you like to accomplish today?"
             await self.session.send_client_content(
                 turns={"parts": [{"text": greeting}]},
                 turn_complete=True,
             )
         except Exception as e:
-            print(f"[JARVIS] ⚠️ Greeting failed: {e}")
+            print(f"[ARNOX] ⚠️ Greeting failed: {e}")
 
     def _build_config(self) -> types.LiveConnectConfig:
         from datetime import datetime
@@ -1489,7 +1517,7 @@ class JarvisLive:
             return types.FunctionResponse(
                 id=fc.id,
                 name=name,
-                response={"result": "Startup sequence active. Try this action again when JARVIS is ready."},
+                response={"result": "Startup sequence active. Try this action again when ARNOX is ready."},
             )
 
         from core.qa_mode import guard_tool_call, qa_block_message
@@ -1502,7 +1530,7 @@ class JarvisLive:
                 response={"result": qa_block_message(qa_decision)},
             )
 
-        print(f"[JARVIS] 🔧 {name}  {args}")
+        print(f"[ARNOX] 🔧 {name}  {args}")
         self.ui.set_state("THINKING")
 
         intercepted = self._intercept_ui_tool_call(name, args)
@@ -1567,6 +1595,10 @@ class JarvisLive:
             elif name == "send_message":
                 r = await asyncio.to_thread(lambda: send_message(parameters=args, response=None, player=self.ui, session_memory=None))
                 result = r or f"Message sent to {args.get('receiver')}."
+
+            elif name == "calendar_control":
+                r = await asyncio.to_thread(lambda: calendar_control(parameters=args, response=None, player=self.ui, session_memory=None))
+                result = r or "Calendar action completed."
 
             elif name == "email_control":
                 if args.get("action", "").lower() == "connect" and not args.get("credentials_path"):
@@ -1654,7 +1686,7 @@ class JarvisLive:
                 if quality not in {"low", "medium", "high"}:
                     raise ValueError("Graphics quality must be low, medium, or high.")
                 self.ui.set_graphics_quality(quality)
-                result = f"JARVIS graphics quality changed to {quality}."
+                result = f"ARNOX graphics quality changed to {quality}."
 
             elif name == "jarvis_ui_control":
                 action = str(args.get("action") or "").strip().lower()
@@ -1662,18 +1694,18 @@ class JarvisLive:
                     theme = str(args.get("theme") or "").strip().lower()
                     allowed = {"arc_reactor", "stealth_red", "vibranium_purple", "nanotech_gold", "platinum"}
                     if theme not in allowed:
-                        raise ValueError(f"Unknown JARVIS theme: {theme or 'missing'}")
+                        raise ValueError(f"Unknown ARNOX theme: {theme or 'missing'}")
                     self.ui.set_theme(theme)
-                    result = f"JARVIS theme changed to {theme.replace('_', ' ')}."
+                    result = f"ARNOX theme changed to {theme.replace('_', ' ')}."
                 elif action == "change_graphics_quality":
                     quality = str(args.get("graphics_quality") or "").strip().lower()
                     if quality not in {"low", "medium", "high"}:
                         raise ValueError(f"Unknown graphics quality: {quality or 'missing'}")
                     self.ui.set_graphics_quality(quality)
-                    result = f"JARVIS graphics quality changed to {quality}."
+                    result = f"ARNOX graphics quality changed to {quality}."
                 else:
                     self.ui.handle_ui_command(action)
-                    result = f"JARVIS interface action completed: {action.replace('_', ' ')}."
+                    result = f"ARNOX interface action completed: {action.replace('_', ' ')}."
 
             elif name == "deep_research":
                 r = request_deep_research(parameters=args, player=self.ui, speak=self.speak)
@@ -1721,7 +1753,7 @@ class JarvisLive:
         if not self.ui.muted:
             self.ui.set_state("LISTENING")
 
-        print(f"[JARVIS] 📤 {name} → {str(result)[:80]}")
+        print(f"[ARNOX] 📤 {name} → {str(result)[:80]}")
         return types.FunctionResponse(
             id=fc.id, name=name,
             response={"result": result}
@@ -1730,7 +1762,7 @@ class JarvisLive:
     async def _execute_tool_batch(self, calls):
         """Run read-only calls concurrently while preserving mutation order."""
         mutating = {
-            "send_message", "prepare_message_reply", "email_control", "reminder",
+            "send_message", "prepare_message_reply", "email_control", "calendar_control", "reminder",
             "computer_settings", "computer_control", "desktop_control", "file_controller",
             "file_processor", "code_helper", "dev_agent", "game_updater",
             "create_presentation", "save_memory", "jarvis_ui_control", "graphics_quality",
@@ -1750,7 +1782,7 @@ class JarvisLive:
             await self.session.send_realtime_input(media=msg)
 
     async def _listen_audio(self):
-        print("[JARVIS] 🎤 Mic started")
+        print("[ARNOX] 🎤 Mic started")
         loop = asyncio.get_event_loop()
 
         def callback(indata, frames, time_info, status):
@@ -1771,15 +1803,15 @@ class JarvisLive:
                 blocksize=CHUNK_SIZE,
                 callback=callback,
             ):
-                print("[JARVIS] 🎤 Mic stream open")
+                print("[ARNOX] 🎤 Mic stream open")
                 while not self._shutdown_requested.is_set():
                     await asyncio.sleep(0.1)
         except Exception as e:
-            print(f"[JARVIS] ❌ Mic: {e}")
+            print(f"[ARNOX] ❌ Mic: {e}")
             raise
 
     async def _receive_audio(self):
-        print("[JARVIS] 👂 Recv started")
+        print("[ARNOX] 👂 Recv started")
         out_buf, in_buf = [], []
         _new_turn = True
         turn_had_audio = False
@@ -1843,7 +1875,7 @@ class JarvisLive:
 
                             full_out = " ".join(out_buf).strip()
                             if full_out:
-                                self.ui.write_log(f"Jarvis: {full_out}")
+                                self.ui.write_log(f"Arnox: {full_out}")
                             if (
                                 getattr(self, "_pending_self_quit", False)
                                 and (full_out or turn_had_audio)
@@ -1857,7 +1889,7 @@ class JarvisLive:
                     if response.tool_call:
                         function_calls = list(response.tool_call.function_calls)
                         for fc in function_calls:
-                            print(f"[JARVIS] 📞 {fc.name}")
+                            print(f"[ARNOX] 📞 {fc.name}")
                         fn_responses = await self._execute_tool_batch(function_calls)
                         await self.session.send_tool_response(
                             function_responses=fn_responses
@@ -1866,16 +1898,16 @@ class JarvisLive:
                         return
         except Exception as e:
             if isinstance(e, genai.errors.APIError) and "1000" in str(e):
-                print("[JARVIS] 🔌 Session closed normally.")
+                print("[ARNOX] 🔌 Session closed normally.")
                 return
-            print(f"[JARVIS] ❌ Recv: {e}")
+            print(f"[ARNOX] ❌ Recv: {e}")
             traceback.print_exc()
             raise
 
 
 
     async def _play_audio(self):
-        print("[JARVIS] 🔊 Play started")
+        print("[ARNOX] 🔊 Play started")
 
         stream = None
         if not self.external_audio:
@@ -1919,7 +1951,7 @@ class JarvisLive:
                     elif stream is not None:
                         await asyncio.to_thread(stream.write, chunk)
         except Exception as e:
-            print(f"[JARVIS] ❌ Play: {e}")
+            print(f"[ARNOX] ❌ Play: {e}")
             raise
         finally:
             self.set_speaking(False)
@@ -1945,7 +1977,7 @@ class JarvisLive:
             if self.runtime_limit_seconds is not None:
                 elapsed = time.time() - start_time
                 if elapsed >= float(self.runtime_limit_seconds):
-                    print(f"[JARVIS] ⏱️ Runtime limit reached ({self.runtime_limit_seconds}s). Exiting.")
+                    print(f"[ARNOX] ⏱️ Runtime limit reached ({self.runtime_limit_seconds}s). Exiting.")
                     try:
                         jarvis_status.write_status({"state": "expired"})
                     except Exception:
@@ -1957,23 +1989,23 @@ class JarvisLive:
                 try:
                     path = Path(self.required_unlock_path)
                     if not path.exists():
-                        print(f"[JARVIS] 🔒 Required unlock path not present: {self.required_unlock_path}")
+                        print(f"[ARNOX] 🔒 Required unlock path not present: {self.required_unlock_path}")
                         print("Please mount the locked container (see scripts/create_locked_dmg.sh).")
                         time.sleep(5)
                         continue
                     if self.required_unlock_secret is not None:
                         content = path.read_text(encoding="utf-8").strip()
                         if content != self.required_unlock_secret:
-                            print("[JARVIS] 🔒 unlock.key content does not match expected secret.")
+                            print("[ARNOX] 🔒 unlock.key content does not match expected secret.")
                             print("Please mount the locked container with the correct unlock.key file.")
                             time.sleep(5)
                             continue
                 except Exception as e:
-                    print(f"[JARVIS] 🔒 Locked path check error: {e}")
+                    print(f"[ARNOX] 🔒 Locked path check error: {e}")
                     time.sleep(1)
                     continue
             try:
-                print("[JARVIS] 🔌 Connecting...")
+                print("[ARNOX] 🔌 Connecting...")
                 self.ui.set_state("THINKING")
                 config = self._build_config()
 
@@ -1987,9 +2019,9 @@ class JarvisLive:
                     self.out_queue      = asyncio.Queue(maxsize=10)
                     self._turn_done_event = asyncio.Event()
 
-                    print("[JARVIS] ✅ Connected.")
+                    print("[ARNOX] ✅ Connected.")
                     self.ui.set_state("LISTENING")
-                    self.ui.write_log("SYS: JARVIS online.")
+                    self.ui.write_log("SYS: ARNOX online.")
                     if not self.cloud_safe:
                         try:
                             jarvis_status.write_status({
@@ -2020,7 +2052,7 @@ class JarvisLive:
                     self.ui.write_log(
                         f"SYS: Voice '{old_voice}' not available. Falling back to {DEFAULT_VOICE_NAME}."
                     )
-                    print(f"[JARVIS] ⚠️ Voice '{old_voice}' unsupported; falling back to {DEFAULT_VOICE_NAME}.")
+                    print(f"[ARNOX] ⚠️ Voice '{old_voice}' unsupported; falling back to {DEFAULT_VOICE_NAME}.")
                     self.ui.sync_voice_display(DEFAULT_VOICE_NAME)
                     if not self.cloud_safe:
                         try:
@@ -2028,14 +2060,14 @@ class JarvisLive:
                         except Exception:
                             pass
                 elif isinstance(actual, genai.errors.APIError) and "1000" in str(actual):
-                    print("[JARVIS] 🔌 Session ended normally.")
+                    print("[ARNOX] 🔌 Session ended normally.")
                     if not self.cloud_safe:
                         try:
                             jarvis_status.write_status({"state": "offline"})
                         except Exception:
                             pass
                 else:
-                    print(f"[JARVIS] ⚠️ {e}")
+                    print(f"[ARNOX] ⚠️ {e}")
                     traceback.print_exc()
 
 def main():
@@ -2051,15 +2083,15 @@ def main():
     running_as_app = getattr(sys, "frozen", False)
 
     if os.environ.get("JARVIS_CLI") != "1" and not running_as_app:
-        print("[JARVIS] Please launch with the JARVIS CLI: jarvis")
+        print("[ARNOX] Please launch with the ARNOX CLI: jarvis")
         return
     if not wait_for_startup_claps():
         return
-    print("[JARVIS] ⚡ Powering up the interface...")
+    print("[ARNOX] ⚡ Powering up the interface...")
     try:
         ui = JarvisUI("face.png")
     except Exception as exc:
-        print(f"[JARVIS] ❌ Interface startup failed: {exc}")
+        print(f"[ARNOX] ❌ Interface startup failed: {exc}")
         traceback.print_exc()
         return
 
@@ -2115,7 +2147,7 @@ def main():
                     try:
                         asyncio.run_coroutine_threadsafe(jarvis.session.close(), jarvis._loop)
                     except Exception as e:
-                        print(f"[JARVIS] Could not close session: {e}")
+                        print(f"[ARNOX] Could not close session: {e}")
         ui.on_tts_provider_change = _on_tts_change
         try:
             asyncio.run(jarvis.run())
@@ -2123,7 +2155,7 @@ def main():
             print("\n🔴 Shutting down...")
         except Exception as exc:
             message = f"Gemini startup failed: {str(exc)[:180]}"
-            print(f"[JARVIS] ❌ {message}")
+            print(f"[ARNOX] ❌ {message}")
             try:
                 ui.write_log(f"ERR: {message}")
                 ui.set_state("LISTENING")
@@ -2131,9 +2163,9 @@ def main():
                 pass
 
     threading.Thread(target=runner, daemon=True).start()
-    print("[JARVIS] ✅ Interface ready.")
+    print("[ARNOX] ✅ Interface ready.")
     ui.root.mainloop()
-    print("[JARVIS] Interface closed.")
+    print("[ARNOX] Interface closed.")
 
 def cli_main():
     """Canonical console entry point installed as the `jarvis` command."""

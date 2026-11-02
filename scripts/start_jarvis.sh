@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Linux launcher for JARVIS (no .command suffix needed since there's no Finder).
+# Linux launcher for ARNOX (no .command suffix needed since there's no Finder).
 # Usage: ./scripts/start_jarvis.sh
 
 set -e
@@ -51,5 +51,5 @@ if grep -qE 'GEMINI_API_KEY\s*=\s*"?YOUR_GEMINI_API_KEY"?\s*$' .env; then
   exit 0
 fi
 
-echo "[start_jarvis] Starting JARVIS through the canonical CLI..."
+echo "[start_jarvis] Starting ARNOX through the canonical CLI..."
 exec "$PWD/scripts/jarvis" "$@"

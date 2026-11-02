@@ -3,7 +3,7 @@
 PowerPoint stores editable 3D objects as DrawingML ``graphicFrame`` elements
 related to embedded GLB package parts.  ``python-pptx`` preserves those unknown
 parts, but it does not expose an API for creating them.  This module provides a
-small, package-native bridge so JARVIS can inventory models in a supplied deck
+small, package-native bridge so ARNOX can inventory models in a supplied deck
 and place a real (rotatable) model into newly generated slides.
 """
 
@@ -237,7 +237,7 @@ def add_native_3d_model(
         properties[0].set("id", str(max(ids or [1]) + 1))
         # PowerPoint Morph treats matching names prefixed with ``!!`` as the
         # same object across slides, allowing a native model to move cleanly.
-        properties[0].set("name", f"!!JARVIS 3D — {asset.description or asset.name}")
+        properties[0].set("name", f"!!ARNOX 3D — {asset.description or asset.name}")
     for creation_id in frame.xpath(".//*[local-name()='creationId']"):
         creation_id.set("id", "{" + str(uuid.uuid4()).upper() + "}")
 

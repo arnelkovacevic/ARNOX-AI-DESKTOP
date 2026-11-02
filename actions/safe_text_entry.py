@@ -95,7 +95,7 @@ def _frontmost_app_name() -> str:
 
 
 class MouseClickBlocker:
-    """Temporarily swallows user mouse clicks while JARVIS is typing."""
+    """Temporarily swallows user mouse clicks while ARNOX is typing."""
 
     def __init__(self):
         self._quartz = None

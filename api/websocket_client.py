@@ -41,8 +41,8 @@ class WebSocketClient:
         content = str(text)
         if content.startswith("You: "):
             role, content = "user", content[5:]
-        elif content.startswith("Jarvis: "):
-            role, content = "assistant", content[8:]
+        elif content.startswith("Arnox: "):
+            role, content = "assistant", content[len("Arnox: "):]
         if self.user_id and role in {"user", "assistant"}:
             from .repositories import add_chat_message
 

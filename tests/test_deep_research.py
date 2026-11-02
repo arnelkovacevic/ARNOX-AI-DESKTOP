@@ -233,7 +233,7 @@ class DeepResearchTests(unittest.TestCase):
 
             self.assertFalse(output.exists())
             self.assertIn("source-first fallback", result.warnings[0])
-            self.assertIn("JARVIS reviewed 1 distinct web sources", result.report_markdown)
+            self.assertIn("ARNOX reviewed 1 distinct web sources", result.report_markdown)
 
     def test_save_and_read_actions_require_a_completed_in_memory_report(self):
         self.assertIn(

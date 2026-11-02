@@ -264,7 +264,7 @@ def ingest_sources(
             research = web_search({"query": request.topic, "mode": "search"}, player=None)
             if research:
                 bundle.records.append(SourceRecord(
-                    label="JARVIS web research",
+                    label="ARNOX web research",
                     kind="research",
                     location=f"web search: {request.topic}",
                     text=str(research)[:80_000],

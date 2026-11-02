@@ -439,7 +439,7 @@ class _BrowserSession:
             try:
                 self._context = await engine_obj.launch_persistent_context(profile, **kwargs)
             except Exception as e:
-                print(f"[Browser] Firefox real profile failed ({e}), using JARVIS profile")
+                print(f"[Browser] Firefox real profile failed ({e}), using ARNOX profile")
                 jarvis = str(Path.home() / ".jarvis_profiles" / "firefox_jarvis")
                 Path(jarvis).mkdir(parents=True, exist_ok=True)
                 self._context = await engine_obj.launch_persistent_context(jarvis, **kwargs)
@@ -502,13 +502,13 @@ class _BrowserSession:
 
         jarvis_profile = str(Path.home() / ".jarvis_profiles" / self.browser_name)
         Path(jarvis_profile).mkdir(parents=True, exist_ok=True)
-        print(f"[Browser] Retrying with JARVIS profile: {jarvis_profile}")
+        print(f"[Browser] Retrying with ARNOX profile: {jarvis_profile}")
 
         try:
             self._context = await engine_obj.launch_persistent_context(jarvis_profile, **kwargs)
             await asyncio.sleep(0.5)
             self._page = await self._context.new_page()
-            print(f"[Browser] ✅ Launched [{label}] with JARVIS profile")
+            print(f"[Browser] ✅ Launched [{label}] with ARNOX profile")
         except Exception as e2:
             raise RuntimeError(f"Could not launch {self.browser_name}: {e2}") from e2
 
