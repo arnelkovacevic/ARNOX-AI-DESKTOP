@@ -107,7 +107,11 @@ def _resolve_file_path(file_path: str, player=None) -> Path:
         except OSError:
             continue
 
-    return requested
+    # Last resort: tolerate dashes, accents, case, and a missing or spoken extension.
+    from core.file_lookup import find_file
+
+    found, _candidates = find_file(raw)
+    return found if found is not None else requested
 
 
 def _detect_type(path: Path) -> str:

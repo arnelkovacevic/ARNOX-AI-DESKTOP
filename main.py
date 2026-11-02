@@ -1683,9 +1683,21 @@ class JarvisLive:
                     result = "The workspace is only available in the desktop app."
                 else:
                     from actions.file_processor import _resolve_file_path
+                    from core.file_lookup import find_file
 
                     resolved = _resolve_file_path(raw_path, self.ui)
-                    result = await asyncio.to_thread(lambda: self.ui.workspace_open_document(str(resolved)))
+                    if not resolved.exists():
+                        found, candidates = find_file(raw_path)
+                        if found is not None:
+                            resolved = found
+                        elif candidates:
+                            resolved = None
+                            result = "Which file do you mean? " + "; ".join(c.name for c in candidates)
+                        else:
+                            resolved = None
+                            result = f"I could not find a file called '{raw_path}' on the Desktop, in Downloads, or in Documents."
+                    if resolved is not None:
+                        result = await asyncio.to_thread(lambda: self.ui.workspace_open_document(str(resolved)))
 
             elif name == "email_attachment":
                 mapped = {"list": "attachments", "read": "attachment_read", "save": "attachment_save"}

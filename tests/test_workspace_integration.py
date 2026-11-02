@@ -165,5 +165,52 @@ class WorkspaceIntegrationTests(unittest.TestCase):
         self.assertIn("only available in the desktop app", response.response["result"])
 
 
+class SpokenFileNameTests(unittest.TestCase):
+    """The assistant rarely reproduces a file name exactly; the tool must still find it."""
+
+    def _live(self):
+        live = main.JarvisLive.__new__(main.JarvisLive)
+        self.opened = []
+        live.ui = SimpleNamespace(
+            muted=True, current_file=None, set_state=lambda *_: None, write_log=lambda *_: None,
+            workspace_open_document=lambda path: self.opened.append(path) or "Opened it.",
+        )
+        live.cloud_safe = False
+        return live
+
+    def _run(self, name, roots):
+        from unittest.mock import patch as _patch
+
+        live = self._live()
+        with _patch("core.file_lookup.default_roots", return_value=roots):
+            call = SimpleNamespace(name="workspace_open", args={"file_path": name}, id="1")
+            return asyncio.run(live._execute_tool(call)).response["result"]
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name)
+        (self.root / "Arnel Kovacevic — Curriculum Vitae.pdf").write_bytes(b"x")
+        (self.root / "Budget 2025.xlsx").write_bytes(b"x")
+        (self.root / "Budget 2026.xlsx").write_bytes(b"x")
+
+    def test_plain_hyphen_and_missing_extension_still_find_the_file(self):
+        for spoken in ("Arnel Kovacevic - Curriculum Vitae.pdf", "arnel kovacevic curriculum vitae", "curriculum vitae pdf"):
+            self.opened.clear() if hasattr(self, "opened") else None
+            self.assertEqual(self._run(spoken, [self.root]), "Opened it.", spoken)
+            self.assertTrue(self.opened[-1].endswith("Curriculum Vitae.pdf"), spoken)
+
+    def test_ambiguous_name_asks_which_one_instead_of_guessing(self):
+        result = self._run("budget", [self.root])
+        self.assertIn("Which file do you mean?", result)
+        self.assertIn("Budget 2025.xlsx", result)
+        self.assertEqual(self.opened, [])
+
+    def test_missing_file_says_where_it_looked(self):
+        result = self._run("passport", [self.root])
+        self.assertIn("could not find", result)
+        self.assertEqual(self.opened, [])
+
+
 if __name__ == "__main__":
     unittest.main()
