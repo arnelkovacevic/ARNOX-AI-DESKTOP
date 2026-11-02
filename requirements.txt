@@ -8,7 +8,7 @@ pywinauto; platform_system=="Windows"
 # a local OpenSSL build. Keep using the compatible binary-wheel release.
 cryptography==48.0.0; platform_system=="Darwin" and platform_machine=="x86_64" and python_version>="3.14"
 cryptography>=44,<51; platform_system!="Darwin"
-duckduckgo-search
+ddgs
 google-genai
 google-generativeai
 google-api-python-client
