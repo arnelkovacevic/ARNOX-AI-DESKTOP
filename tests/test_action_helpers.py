@@ -119,26 +119,23 @@ class ActionHelperTests(unittest.TestCase):
         self.assertTrue(result.startswith("EMAIL_APPROVAL_REQUIRED|"))
         pending = email_control._get_pending_email()
         self.assertEqual(pending["to"], "alex@example.com")
-        self.assertEqual(pending["delivery"], "gmail_web")
-        self.assertIn("visibly typed", result)
-        compose.assert_called_once()
+        # RULE 1: the draft is held inside ARNOX and sent through the Gmail API. No browser is opened.
+        self.assertEqual(pending["delivery"], "gmail_api")
+        self.assertIn("Nothing opened outside the app", result)
+        compose.assert_not_called()
         script.assert_not_called()
 
-    def test_gmail_prepare_failure_does_not_create_pending_email(self):
+    def test_gmail_prepare_never_uses_a_browser_even_if_a_sign_in_would_be_needed(self):
         email_control._clear_pending_email()
-        with patch.object(
-            email_control,
-            "_gmail_web_prepare",
-            return_value="Gmail requires a browser sign-in. Sign in, then ask me to prepare the email again.",
-        ):
+        with patch.object(email_control, "_gmail_web_prepare", side_effect=AssertionError("no browser")):
             result = email_control.email_control({
                 "action": "prepare",
                 "to": "alex@example.com",
                 "subject": "Project update",
                 "body": "The presentation is ready.",
             })
-        self.assertIn("requires a browser sign-in", result)
-        self.assertEqual(email_control._get_pending_email(), {})
+        self.assertTrue(result.startswith("EMAIL_APPROVAL_REQUIRED|"))
+        self.assertEqual(email_control._get_pending_email()["delivery"], "gmail_api")
 
     def test_visible_gmail_approval_uses_browser_send_not_gmail_api(self):
         draft = {

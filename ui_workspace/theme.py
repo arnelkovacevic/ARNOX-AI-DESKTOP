@@ -78,6 +78,13 @@ def workspace_stylesheet() -> str:
             border-radius: 12px; padding: 5px 12px; font-size: 11px;
         }}
         QLabel#mailNote {{ color: {C.TEXT_DIM}; font-size: 10px; }}
+        QPlainTextEdit#composeBody {{
+            background: {C.PANEL}; color: {C.WHITE}; border: 1px solid {C.BORDER}; border-radius: 8px;
+            padding: 16px; font-family: "{font_family()}"; font-size: 13px; selection-background-color: {C.PRI_DIM};
+        }}
+        QPushButton#sendButton {{ background: {C.PRI}; color: {C.BG}; border: none; font-weight: 700; padding: 8px 20px; }}
+        QPushButton#sendButton:hover {{ background: {C.ENERGY}; }}
+        QPushButton#sendButton:disabled {{ background: {C.PRI_DIM}; color: {C.TEXT_DIM}; }}
         QTextBrowser#mailBody {{
             background: {C.PANEL}; color: {C.WHITE}; border: 1px solid {C.BORDER}; border-radius: 8px;
             padding: 18px; font-family: "{font_family()}"; font-size: 13px; selection-background-color: {C.PRI_DIM};

@@ -553,7 +553,10 @@ TOOL_DECLARATIONS = [
             "properties": {
                 "file_path": {"type": "STRING", "description": "Path or file name of the PDF, CSV, Excel, or HTML file. Empty uses the file the user dropped in."},
                 "url": {"type": "STRING", "description": "https address to show in the workspace, e.g. https://www.youtube.com."},
-                "view": {"type": "STRING", "enum": ["inbox", "unread", "agenda", "message"], "description": "inbox, unread, agenda: Gmail or calendar lists in the workspace. message: open one email, laid out like a real mail, in the workspace. Uses the connected Google account; no browser login."},
+                "view": {"type": "STRING", "enum": ["inbox", "unread", "sent", "trash", "agenda", "message", "compose", "reply"], "description": "inbox, unread, sent, trash, agenda: Gmail or calendar lists in the workspace. message: open one email, laid out like a real mail. compose: open a new mail window with the draft filled in. reply: open a reply to the mail last read (or message_id) with the draft filled in. Nothing is sent until the user presses Send. Uses the connected Google account; no browser login."},
+                "to": {"type": "STRING", "description": "For view=compose: recipient address(es)."},
+                "cc": {"type": "STRING", "description": "For view=compose or reply: Cc address(es)."},
+                "body": {"type": "STRING", "description": "For view=compose or reply: the message text to put in the draft."},
                 "sender": {"type": "STRING", "description": "For view=message: show the newest email from this sender (name or address)."},
                 "subject": {"type": "STRING", "description": "For view=message: show the newest email whose subject matches."},
                 "number": {"type": "INTEGER", "description": "For view=message: the row number in the inbox last shown (1 is the top)."},
@@ -1701,7 +1704,9 @@ class JarvisLive:
                     else:
                         from ui_workspace import data_views
 
-                        options = {key: args.get(key) for key in ("sender", "subject", "number", "message_id", "days")}
+                        options = {key: args.get(key) for key in (
+                            "sender", "subject", "number", "message_id", "days", "to", "cc", "body",
+                        )}
                         try:
                             kind, payload, title, text = await asyncio.to_thread(lambda: data_views.fetch(raw_view, options))
                             await asyncio.to_thread(lambda: self.ui.workspace_show_data(kind, payload, title))

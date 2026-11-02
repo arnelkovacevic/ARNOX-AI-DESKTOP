@@ -126,6 +126,18 @@ Mail i kalendar u workspaceu (preko povezanog Google naloga, bez prijave u pregl
   Dupli klik na red u inboxu otvara taj mail. Poruka se prikazuje samo kao običan tekst (bez linkova i slika).
   Za čitanje naglas: "read me that email".
 
+  Poslana pošta i smeće:
+  "show my sent mail"                    lista poslanih (prikazuje primaoca)
+  "show the trash"                       obrisani mailovi
+  "delete this email"                    prebacuje otvoreni mail u smeće (vraća se, ništa se ne briše zauvijek)
+  "restore that email"                   vraća iz smeća u inbox (ili dugme "Restore to inbox" u čitaču)
+
+  Pisanje i odgovaranje (sve u ARNOX prozoru, bez Chromea):
+  "write a mail to Alex saying ..."      otvara prozor za pisanje s popunjenim nacrtom. Ništa se ne šalje dok ti ne pritisneš SEND.
+  "reply to this email saying ..."       otvara odgovor (isti thread) s tekstom i citatom, ti pritisneš SEND
+  U čitaču su dugmad Reply i Delete; u inboxu dugme "New mail".
+  Ako je workspace sakriven: "send an email to Alex ..." pročita nacrt naglas i šalje tek nakon tvog "yes" (preko Gmail API-ja, bez prozora).
+
 Tiha pretraga (bez prikaza, odgovor dobijaš glasom):
   "what is the weather in Sarajevo today"     traži u pozadini, workspace se NE otvara
   "sakrij workspace"                          samo sakriva, tabovi ostaju

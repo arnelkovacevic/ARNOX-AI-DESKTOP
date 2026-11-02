@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, pyqtSignal
+from PyQt6.QtCore import QEasingCurve, QPropertyAnimation, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
     QGraphicsOpacityEffect, QHBoxLayout, QLabel, QPushButton, QTabBar, QTabWidget, QToolButton, QVBoxLayout, QWidget,
 )
 
 from core.workspace_router import Route, classify_file, route_data, route_web
 from ui_workspace import theme
-from ui_workspace.mail_tabs import CalendarTab, InboxTab, MessageTab
+from ui_workspace.mail_actions import MailActions
+from ui_workspace.mail_tabs import CalendarTab, ComposeTab, InboxTab, MessageTab
 from ui_workspace.pdf_tab import PdfTab
 from ui_workspace.table_tab import TableTab
 from ui_workspace.web_tab import WebTab
@@ -32,10 +33,20 @@ class WorkspaceView(QWidget):
         header = QHBoxLayout()
         self._title = QLabel("WORKSPACE")
         self._title.setObjectName("workspaceStatus")
+        self._flash_label = QLabel("")
+        self._flash_label.setObjectName("workspaceStatus")
+        self._flash_timer = QTimer(self)
+        self._flash_timer.setSingleShot(True)
+        self._flash_timer.timeout.connect(lambda: self._flash_label.setText(""))
+        self._mail = MailActions(self)
+        self._mail.done.connect(self._on_mail_done)
+        self._compose_count = 0
         self._back = QPushButton("◀  BACK TO CORE")
         self._back.setToolTip("Hide the workspace and return to ARNOX")
         self._back.clicked.connect(self.hide_requested.emit)
         header.addWidget(self._title)
+        header.addSpacing(16)
+        header.addWidget(self._flash_label)
         header.addStretch(1)
         header.addWidget(self._back)
         layout.addLayout(header)
@@ -79,22 +90,37 @@ class WorkspaceView(QWidget):
     # ----- opening and closing ---------------------------------------------------------------
     def show_data(self, kind: str, payload, title: str) -> str:
         """Show data already loaded elsewhere (in a worker thread), so the window never blocks on the network."""
-        key = f"data:{kind}" if kind != "message" else f"data:message:{payload.get('id', '')}"
+        if kind == "compose":
+            self._compose_count += 1
+            key = f"data:compose:{self._compose_count}"
+        elif kind == "message":
+            key = f"data:message:{payload.get('id', '')}"
+        else:
+            key = f"data:{kind}"
         existing = self._index_of(key)
         if existing is not None:
             if kind == "message":
                 self._tabs.setCurrentIndex(existing)
                 return f"{title} is already open. Switched to it."
-            self.close_tab(existing)   # a refreshed inbox or agenda replaces the old tab
+            self.close_tab(existing)   # a refreshed inbox, folder, or agenda replaces the old tab
         if self._tabs.count() >= MAX_TABS:
             self.close_tab(0)
-        if kind == "inbox":
-            widget = InboxTab(payload, title)
+        if kind in ("inbox", "sent", "trash"):
+            widget = InboxTab(payload, title, mode=kind)
             widget.open_requested.connect(self._request_message)
+            widget.compose_requested.connect(lambda: self.show_data("compose", self._blank_draft(), "New mail"))
         elif kind == "agenda":
             widget = CalendarTab(payload, title)
         elif kind == "message":
             widget = MessageTab(payload)
+            widget.reply_requested.connect(self._start_reply)
+            widget.trash_requested.connect(self._mail.trash)
+            widget.restore_requested.connect(self._mail.restore)
+        elif kind == "compose":
+            widget = ComposeTab(payload)
+            widget.setProperty("mail_token", key)
+            widget.send_requested.connect(lambda data, token=key: self._mail.send(token, data))
+            widget.discard_requested.connect(lambda token=key: self._close_by_key(token))
         else:
             return f"Cannot show '{kind}'."
         widget.setProperty("route_target", key)
@@ -104,6 +130,52 @@ class WorkspaceView(QWidget):
 
     def _request_message(self, message_id: str) -> None:
         self.message_requested.emit(message_id)
+
+    @staticmethod
+    def _blank_draft() -> dict:
+        return {"to": "", "cc": "", "subject": "", "body": "", "thread_id": "", "in_reply_to": "", "references": ""}
+
+    def _start_reply(self, message: dict) -> None:
+        from ui_workspace.data_views import reply_payload
+
+        self.show_data("compose", reply_payload(message), "Reply")
+
+    def _close_by_key(self, key: str) -> None:
+        index = self._index_of(key)
+        if index is not None:
+            self.close_tab(index)
+
+    def flash(self, text: str) -> None:
+        """Short status in the workspace header: what just happened, for a few seconds."""
+        self._flash_label.setText(text)
+        self._flash_timer.start(6000)
+
+    def _on_mail_done(self, action: str, ok: bool, message: str, key: str) -> None:
+        if action == "send":
+            index = self._index_of(key)
+            tab = self._tabs.widget(index) if index is not None else None
+            if ok:
+                self.flash(message)
+                self._close_by_key(key)
+            elif tab is not None:
+                tab.mail_result(False, message)
+            else:
+                self.flash(message)
+            return
+        index = self._index_of(f"data:message:{key}")
+        tab = self._tabs.widget(index) if index is not None else None
+        if ok:
+            for position in range(self._tabs.count()):
+                widget = self._tabs.widget(position)
+                if hasattr(widget, "remove_message"):
+                    widget.remove_message(key)
+            self.flash(message)
+            if index is not None:
+                self.close_tab(index)
+        elif tab is not None:
+            tab.mail_result(False, message)
+        else:
+            self.flash(message)
 
     def open_web(self, address: str) -> str:
         """Show an https page (or http on localhost) in a web tab."""

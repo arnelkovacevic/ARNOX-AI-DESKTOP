@@ -118,7 +118,7 @@ class ToolTests(unittest.TestCase):
 
     def test_tool_declares_the_views(self):
         decl = next(d for d in main.TOOL_DECLARATIONS if d["name"] == "workspace_open")
-        self.assertEqual(decl["parameters"]["properties"]["view"]["enum"], ["inbox", "unread", "agenda", "message"])
+        self.assertEqual(decl["parameters"]["properties"]["view"]["enum"], ["inbox", "unread", "sent", "trash", "agenda", "message", "compose", "reply"])
 
 
 if __name__ == "__main__":

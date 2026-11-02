@@ -419,7 +419,8 @@ def _gmail_read(message_id: str, max_chars: int = 12000) -> str:
         return _gmail_api_error(exc, "message reading")
 
 
-def _send_gmail(draft: dict[str, str]) -> str:
+def _gmail_send_core(draft: dict[str, str]) -> tuple[bool, str]:
+    """Send one message through the Gmail API. A reply keeps its thread when thread_id is given."""
     try:
         service = _gmail_service()
         message = EmailMessage()
@@ -429,17 +430,61 @@ def _send_gmail(draft: dict[str, str]) -> str:
         if draft.get("bcc"):
             message["Bcc"] = draft["bcc"]
         message["Subject"] = draft["subject"]
+        if draft.get("in_reply_to"):
+            message["In-Reply-To"] = draft["in_reply_to"]
+            message["References"] = (draft.get("references", "") + " " + draft["in_reply_to"]).strip()
         message.set_content(draft["body"])
-        raw = base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")
-        result = service.users().messages().send(userId="me", body={"raw": raw}).execute()
+        body = {"raw": base64.urlsafe_b64encode(message.as_bytes()).decode("ascii")}
+        if draft.get("thread_id"):
+            body["threadId"] = draft["thread_id"]
+        result = service.users().messages().send(userId="me", body=body).execute()
         if not result.get("id"):
-            return "Gmail did not confirm that the email was sent. The pending draft is still available."
-        _clear_pending_email()
-        return f"Email sent through Gmail to {draft['to']}."
+            return False, "Gmail did not confirm that the email was sent."
+        return True, f"Email sent through Gmail to {draft['to']}."
     except GmailConnectionError as exc:
-        return str(exc)
+        return False, str(exc)
     except Exception as exc:
-        return _gmail_api_error(exc, "sending")
+        return False, _gmail_api_error(exc, "sending")
+
+
+def _send_gmail(draft: dict[str, str]) -> str:
+    ok, message = _gmail_send_core(draft)
+    if ok:
+        _clear_pending_email()
+        return message
+    return message + " The pending draft is still available." if "confirm" in message else message
+
+
+def send_mail_now(to: str, subject: str, body: str, cc: str = "", thread_id: str = "",
+                  in_reply_to: str = "", references: str = "") -> tuple[bool, str]:
+    """Send from the workspace compose window. The user pressing Send is the explicit approval."""
+    recipients = _normalize_recipients(to)
+    if not recipients:
+        return False, "A valid recipient email address is required."
+    body = str(body or "").strip()
+    if not body:
+        return False, "The message is empty."
+    subject = re.sub(r"[\r\n]+", " ", str(subject or "")).strip() or "(No subject)"
+    return _gmail_send_core({
+        "to": recipients, "cc": _normalize_recipients(cc), "subject": subject, "body": body,
+        "thread_id": thread_id, "in_reply_to": in_reply_to, "references": references,
+    })
+
+
+def set_trash(message_id: str, trash: bool) -> tuple[bool, str]:
+    """Move a message to the trash or back to where it was. Reversible, never permanent."""
+    try:
+        service = _gmail_service()
+        messages = service.users().messages()
+        if trash:
+            messages.trash(userId="me", id=message_id).execute()
+            return True, "Moved to the trash. You can restore it."
+        messages.untrash(userId="me", id=message_id).execute()
+        return True, "Restored from the trash."
+    except GmailConnectionError as exc:
+        return False, str(exc)
+    except Exception as exc:
+        return False, _gmail_api_error(exc, "trash update")
 
 
 async def _first_visible(page, selectors: tuple[str, ...], timeout_seconds: float = 20.0):
@@ -1118,18 +1163,18 @@ def _prepare_email(params: dict, player=None) -> str:
         "provider": provider,
     }
     if provider == "gmail":
-        browser = str(params.get("browser", "chrome")).strip().lower() or "chrome"
-        draft["browser"] = browser
-        result = _gmail_web_prepare(draft, player=player, browser=browser)
-        if result != "GMAIL_WEB_DRAFT_READY":
-            return result
-        draft["delivery"] = "gmail_web"
+        # RULE 1: no external browser. The draft is held in memory and sent through the Gmail API
+        # only after the user approves it.
+        draft["delivery"] = "gmail_api"
+        for key in ("thread_id", "in_reply_to", "references"):
+            if params.get(key):
+                draft[key] = str(params[key])
     _set_pending_email(draft)
     preview = body if len(body) <= 800 else body[:800].rstrip() + "…"
     copies = (f"\nCc: {cc}" if cc else "") + (f"\nBcc: {bcc}" if bcc else "")
     return (
         "EMAIL_APPROVAL_REQUIRED|A pending email is ready. Nothing has been sent.\n"
-        + ("ARNOX opened Gmail and visibly typed this draft. It remains open for your review.\n" if provider == "gmail" else "")
+        + ("The draft is held inside ARNOX. Nothing opened outside the app.\n" if provider == "gmail" else "")
         + f"Provider: {'Gmail' if provider == 'gmail' else 'Apple Mail' if provider == 'apple_mail' else 'Default mail app'}\n"
         f"To: {to}{copies}\nSubject: {subject}\n\n{preview}\n\n"
         "Ask the user to approve, revise, or cancel this exact email."
@@ -1506,6 +1551,8 @@ def _gmail_management(action: str, params: dict) -> str | None:
     Returns None when the action is not a management action.
     """
     message_id = str(params.get("message_id", "")).strip()
+    if not message_id and action in {"trash", "untrash", "mark_read", "mark_unread", "star", "unstar", "archive"}:
+        message_id = _LAST_READ_MESSAGE_ID   # "delete this mail" acts on the mail just opened
     limit = _bounded_limit(params.get("limit", 10))
     if action == "folders":
         return _gmail_labels()

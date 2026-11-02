@@ -15,7 +15,7 @@ from PyQt6.QtCore import QModelIndex, QRect, QSize, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QPainter, QStandardItem, QStandardItemModel
 from PyQt6.QtWidgets import (
     QFrame, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QListView, QStyle, QStyledItemDelegate,
-    QSizePolicy, QTextBrowser, QVBoxLayout, QWidget,
+    QPlainTextEdit, QPushButton, QSizePolicy, QTextBrowser, QVBoxLayout, QWidget,
 )
 from PyQt6.QtCore import QSortFilterProxyModel
 
@@ -163,10 +163,12 @@ class _FilterProxy(QSortFilterProxyModel):
 
 class InboxTab(QWidget):
     open_requested = pyqtSignal(str)
+    compose_requested = pyqtSignal()
 
-    def __init__(self, frame: pandas.DataFrame, title: str = "Inbox", parent=None):
+    def __init__(self, frame: pandas.DataFrame, title: str = "Inbox", mode: str = "inbox", parent=None):
         super().__init__(parent)
         self.error = ""
+        self.mode = mode
         layout = QVBoxLayout(self)
         layout.setContentsMargins(10, 10, 10, 10)
         layout.setSpacing(8)
@@ -176,14 +178,18 @@ class InboxTab(QWidget):
         self._search.setClearButtonEnabled(True)
         self._count = QLabel("")
         self._count.setObjectName("workspaceStatus")
+        self._compose = QPushButton("✎  New mail")
+        self._compose.clicked.connect(self.compose_requested.emit)
         bar.addWidget(self._search, stretch=1)
         bar.addWidget(self._count)
+        bar.addWidget(self._compose)
         layout.addLayout(bar)
 
         self._model = QStandardItemModel(self)
         unread_total = 0
         for _, row in frame.iterrows():
-            name, _address = parse_sender(row.get("from", ""))
+            # In the Sent folder the interesting person is the recipient, not yourself.
+            name, _address = parse_sender(row.get("to", "") if mode == "sent" else row.get("from", ""))
             item = QStandardItem()
             item.setData(str(row.get("id", "")), ROLE_ID)
             item.setData(name, ROLE_NAME)
@@ -227,6 +233,17 @@ class InboxTab(QWidget):
 
     def message_id_at(self, row: int) -> str:
         return str(self._proxy.index(row, 0).data(ROLE_ID) or "")
+
+    def remove_message(self, message_id: str) -> None:
+        """Drop a row after the message was moved to the trash or restored."""
+        for row in range(self._model.rowCount()):
+            if str(self._model.index(row, 0).data(ROLE_ID)) == message_id:
+                if self._model.index(row, 0).data(ROLE_UNREAD):
+                    self._unread_total = max(0, self._unread_total - 1)
+                self._model.removeRow(row)
+                break
+        self._empty.setVisible(self._model.rowCount() == 0)
+        self._filter(self._search.text())
 
     def _filter(self, text: str) -> None:
         self._proxy.setFilterRegularExpression(text)
@@ -409,9 +426,14 @@ class CalendarTab(QWidget):
 class MessageTab(QWidget):
     """A message laid out like a real email: header card, then the body, then attachments."""
 
+    reply_requested = pyqtSignal(dict)
+    trash_requested = pyqtSignal(str)
+    restore_requested = pyqtSignal(str)
+
     def __init__(self, message: dict, parent=None):
         super().__init__(parent)
         self.error = ""
+        self.message = message
         self.message_id = str(message.get("id", ""))
         layout = QVBoxLayout(self)
         layout.setContentsMargins(14, 12, 14, 12)
@@ -455,6 +477,24 @@ class MessageTab(QWidget):
             badge.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
             top.addWidget(badge, alignment=Qt.AlignmentFlag.AlignTop)
         card_layout.addLayout(top)
+
+        actions = QHBoxLayout()
+        actions.setSpacing(8)
+        self._reply = QPushButton("↩  Reply")
+        self._reply.clicked.connect(lambda: self.reply_requested.emit(self.message))
+        self._trash = QPushButton("🗑  Delete")
+        self._trash.clicked.connect(lambda: self._start("trash"))
+        self._restore = QPushButton("↺  Restore to inbox")
+        self._restore.clicked.connect(lambda: self._start("restore"))
+        trashed = bool(message.get("trashed"))
+        self._trash.setVisible(not trashed)
+        self._restore.setVisible(trashed)
+        self._status = QLabel("")
+        self._status.setObjectName("workspaceStatus")
+        for widget in (self._reply, self._trash, self._restore):
+            actions.addWidget(widget)
+        actions.addWidget(self._status, stretch=1)
+        card_layout.addLayout(actions)
 
         divider = QFrame()
         divider.setFrameShape(QFrame.Shape.HLine)
@@ -513,5 +553,106 @@ class MessageTab(QWidget):
     def body_text(self) -> str:
         return self._body.toPlainText()
 
+    def _start(self, action: str) -> None:
+        for button in (self._reply, self._trash, self._restore):
+            button.setEnabled(False)
+        self._status.setText("Working…")
+        (self.trash_requested if action == "trash" else self.restore_requested).emit(self.message_id)
+
+    def mail_result(self, ok: bool, text: str) -> None:
+        """Called by the workspace when the background action finished."""
+        self._status.setText(text)
+        if not ok:
+            for button in (self._reply, self._trash, self._restore):
+                button.setEnabled(True)
+
     def title(self) -> str:
         return ""
+
+
+# ----- compose ---------------------------------------------------------------------------------
+class ComposeTab(QWidget):
+    """Write a new mail or a reply. Pressing Send is the explicit approval to send it."""
+
+    send_requested = pyqtSignal(dict)
+    discard_requested = pyqtSignal()
+
+    def __init__(self, payload: dict, parent=None):
+        super().__init__(parent)
+        self.error = ""
+        self._payload = dict(payload)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(10)
+
+        card = QFrame()
+        card.setObjectName("mailCard")
+        grid = QGridLayout(card)
+        grid.setContentsMargins(20, 16, 20, 16)
+        grid.setHorizontalSpacing(14)
+        grid.setVerticalSpacing(10)
+        self._to = QLineEdit(str(payload.get("to", "")))
+        self._cc = QLineEdit(str(payload.get("cc", "")))
+        self._subject = QLineEdit(str(payload.get("subject", "")))
+        self._to.setPlaceholderText("name@example.com, another@example.com")
+        self._subject.setPlaceholderText("Subject")
+        for row, (key, field) in enumerate((("TO", self._to), ("CC", self._cc), ("SUBJECT", self._subject))):
+            label = QLabel(key)
+            label.setObjectName("mailKey")
+            grid.addWidget(label, row, 0, Qt.AlignmentFlag.AlignVCenter)
+            grid.addWidget(field, row, 1)
+        grid.setColumnStretch(1, 1)
+        layout.addWidget(card)
+
+        self._body = QPlainTextEdit(str(payload.get("body", "")))
+        self._body.setObjectName("composeBody")
+        self._body.setPlaceholderText("Write your message")
+        layout.addWidget(self._body, stretch=1)
+
+        bar = QHBoxLayout()
+        self._send = QPushButton("➤  Send")
+        self._send.setObjectName("sendButton")
+        self._discard = QPushButton("Discard")
+        self._status = QLabel("")
+        self._status.setObjectName("workspaceStatus")
+        bar.addWidget(self._send)
+        bar.addWidget(self._discard)
+        bar.addWidget(self._status, stretch=1)
+        note = QLabel("A draft written by ARNOX is not sent until you press Send.")
+        note.setObjectName("mailNote")
+        bar.addWidget(note)
+        layout.addLayout(bar)
+
+        self._send.clicked.connect(self._on_send)
+        self._discard.clicked.connect(self.discard_requested.emit)
+        # Start typing where a reply belongs: above the quoted text. A blank mail starts in To.
+        cursor = self._body.textCursor()
+        cursor.movePosition(cursor.MoveOperation.Start)
+        self._body.setTextCursor(cursor)
+        (self._body if self._to.text().strip() else self._to).setFocus()
+
+    def _on_send(self) -> None:
+        recipients = self._to.text().strip()
+        if "@" not in recipients:
+            self._status.setText("Add a recipient address first.")
+            return
+        if not self._body.toPlainText().strip():
+            self._status.setText("The message is empty.")
+            return
+        payload = dict(self._payload)
+        payload.update({
+            "to": recipients, "cc": self._cc.text().strip(),
+            "subject": self._subject.text().strip(), "body": self._body.toPlainText(),
+        })
+        self._send.setEnabled(False)
+        self._status.setText("Sending…")
+        self.send_requested.emit(payload)
+
+    def mail_result(self, ok: bool, text: str) -> None:
+        self._status.setText(text)
+        if not ok:
+            self._send.setEnabled(True)
+
+    def fields(self) -> dict:
+        return {"to": self._to.text(), "cc": self._cc.text(), "subject": self._subject.text(),
+                "body": self._body.toPlainText()}
