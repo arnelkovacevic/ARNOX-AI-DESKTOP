@@ -195,3 +195,18 @@ class WorkspaceOpenUrlPrecedenceTests(unittest.TestCase):
         result = asyncio.run(live._execute_tool(call)).response["result"]
         self.assertEqual(opened, ["https://www.instagram.com"])
         self.assertEqual(result, "Opened.")
+
+
+class StartupGreetingOnceTests(unittest.TestCase):
+    def test_greeting_runs_once_per_launch_even_after_a_reconnect(self):
+        import asyncio
+        from unittest import mock
+
+        live = main.JarvisLive.__new__(main.JarvisLive)
+        session = mock.AsyncMock()
+        live.session = session
+        live.ui = SimpleNamespace(muted=True)
+        with mock.patch.object(main, "load_memory", return_value={"identity": {"name": {"value": "Arnel"}}}):
+            asyncio.run(live._announce_startup())
+            asyncio.run(live._announce_startup())   # a reconnect calls it again
+        self.assertEqual(session.send_client_content.await_count, 1)

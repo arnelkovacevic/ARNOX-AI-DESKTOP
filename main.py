@@ -1538,6 +1538,11 @@ class JarvisLive:
         return _load_voice_name()
 
     async def _announce_startup(self):
+        # Greet once per app launch. A reconnect after a server error must resume silently,
+        # not greet the user again as if ARNOX had just started.
+        if getattr(self, "_greeted", False):
+            return
+        self._greeted = True
         try:
             memory = load_memory()
             name_entry = memory.get("identity", {}).get("name")
