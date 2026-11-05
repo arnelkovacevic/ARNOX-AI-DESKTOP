@@ -49,6 +49,10 @@ class WorkspaceView(QWidget):
         self._compose_count = 0
         self._temp_dirs: dict[str, str] = {}   # opened attachment -> private temp folder removed on close
         self._async_done.connect(lambda fn: fn())
+        self._new_mail = QPushButton("✎  New mail")
+        self._new_mail.setToolTip("Write a new mail, from any tab")
+        self._new_mail.clicked.connect(lambda: self.show_data("compose", self._blank_draft(), "New mail"))
+        header.addWidget(self._new_mail)
         self._back = QPushButton("◀  BACK TO CORE")
         self._back.setToolTip("Hide the workspace and return to ARNOX")
         self._back.clicked.connect(self.hide_requested.emit)
